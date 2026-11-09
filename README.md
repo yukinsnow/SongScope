@@ -118,11 +118,16 @@ SONG=/path/to/example.song xvfb-run -a node_modules/.bin/electron --no-sandbox s
 
 格式笔记：`MusicPart` 保存 `clipID / start / length / offset`（拍）；`mediapool.xml` 中的 `MusicClip mediaID` 指向 `Performances/**/*.musicx`。VSTi 通过乐器输出通道关联，插入与发送保持槽位顺序。
 
-## 图标待选
+## Logo 待选
 
-现用图标尚未替换。最新候选 E「原结构」、F「整齐版」、G「圆润版」保留内部走带线与三色 MIDI 块，去掉镜片圆环、反光及同心线。见 `public/brand/candidates/` 和网页版 `icons.html`。
+现用图标尚未替换。最新一轮为 10 款不同风格的 AI 品牌概念图：手写音乐、瑞士极简、建筑字母、包豪斯、工业录音棚、复古合成器、丝带、负空间、唱片厂牌与模块音序。采用电蓝 / 深蓝黑 / 白色配色。
 
-候选页的预选只存于本机，不会自动更换应用图标。此前 A/B/C/D 的 SVG 仍保留作设计记录。运行 `python3 scripts/make-icon-options.py` 可重建当前三个候选及预览页。
+- [在线放大对比](https://songscope.pages.dev/brand/round-3/)
+- 原图：`public/brand/round-3/01.png` 至 `10.png`
+- [完整提示词](docs/branding/round-3/prompts.md)，使用内置 imagegen 生成
+- 对比图：`shots/logo-round3-sheet.png`
+
+当前均为概念预览，选定后再矢量化与小尺寸适配；不随此次探索改动正式应用图标。此前 E/F/G 去镜片方案仍保留于 `icons.html`，A/B/C/D 与 E/F/G 的 SVG 仍在 `public/brand/candidates/` 作记录。
 
 ---
 
