@@ -1,9 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="96" fill="#14161a"/>
-  <rect x="40" y="40" width="432" height="432" rx="72" fill="none" stroke="#2e343d" stroke-width="8"/>
-  <text x="96" y="300" font-family="ui-monospace, Menlo, monospace" font-weight="800" font-size="190" fill="#ffffff">S1</text>
-  <rect x="300" y="196" width="120" height="16" rx="8" fill="#ff8a3d"/>
-  <rect x="300" y="238" width="86" height="16" rx="8" fill="#ff8a3d" opacity=".7"/>
-  <rect x="300" y="280" width="120" height="16" rx="8" fill="#ff8a3d" opacity=".45"/>
-  <text x="96" y="392" font-family="-apple-system, sans-serif" font-size="34" fill="#8b93a1" letter-spacing="8">TOOLBOX</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+ <defs><linearGradient id="bg" x1="40" y1="20" x2="470" y2="490" gradientUnits="userSpaceOnUse"><stop stop-color="#273e49"/><stop offset="1" stop-color="#101b25"/></linearGradient><linearGradient id="ring" x1="112" y1="120" x2="380" y2="410" gradientUnits="userSpaceOnUse"><stop stop-color="#b6f4db"/><stop offset="1" stop-color="#50b8b5"/></linearGradient></defs>
+ <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+ <rect x="15" y="15" width="482" height="482" rx="99" stroke="#ffffff" stroke-opacity=".08" stroke-width="2"/>
+ <circle cx="256" cy="256" r="151" fill="#102a32" stroke="url(#ring)" stroke-width="26"/>
+ <circle cx="256" cy="256" r="113" stroke="#8ce1cf" stroke-opacity=".17" stroke-width="3"/>
+ <circle cx="256" cy="256" r="77" stroke="#8ce1cf" stroke-opacity=".13" stroke-width="3"/>
+ <path d="M156 176a128 128 0 0 1 100-48" stroke="#effff6" stroke-opacity=".6" stroke-width="7" stroke-linecap="round"/>
+ <rect x="169" y="204" width="112" height="23" rx="7" fill="#a7ead2"/>
+ <rect x="228" y="245" width="114" height="23" rx="7" fill="#67c8c1"/>
+ <rect x="169" y="286" width="69" height="23" rx="7" fill="#ddbf87"/>
+ <rect x="249" y="286" width="60" height="23" rx="7" fill="#ddbf87"/>
+ <path d="M195 184v144" stroke="#ecfff7" stroke-width="5" stroke-linecap="round"/>
+ <circle cx="195" cy="184" r="7" fill="#ecfff7"/>
 </svg>

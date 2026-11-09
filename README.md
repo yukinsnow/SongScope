@@ -1,119 +1,127 @@
-# S1 Toolbox
+# 曲镜 · SongScope
 
-本地桌面工具，用于拆解 **PreSonus Studio One / Fender Studio Pro** 的 `.song` 工程文件：
+**打开 Studio One 工程，直观查看歌曲结构、轨道、插件与 MIDI。**
 
-- 查看全部轨道（名称、类型、颜色、文件夹层级、channelID）
-- 查看每条轨道加载的乐器与效果插件（Native / 第三方）
-- 浏览工程里的 MIDI 片段（clipID、起点、长度、音符数）
-- 把 MIDI 片段导出为标准 `.mid`
-- 把 `.mid` 写入工程（克隆已有片段的内部结构，只替换音符），另存为新 `.song`
-- 一键导出格式诊断 JSON（用于适配未知版本 / 反馈问题）
+曲镜是一个只读歌曲浏览器：不需要安装工程里的 VST 插件，也能查看工程结构、音符片段和插件名称。支持 Windows / macOS / Linux 桌面构建，以及手机与平板上的浏览器 / PWA。
 
-所有解析都在本地完成，文件不会上传。
+> 当前为私有预览项目。GitHub 仓库与 Release 保持私有。网页版可通过链接访问，工程文件仅在使用者本地解析，不会上传到服务器。
 
-## 运行
+## 网页版
+
+- 应用：<https://songscope.pages.dev>
+- 简约图标候选：<https://songscope.pages.dev/icons.html>
+- 桌面下载：本仓库的 [Releases](../../releases)，需要具有仓库访问权限。
+
+## 功能
+
+### 歌曲首页
+
+打开 `.song` 后，默认显示工程内的歌曲封面、名称、艺术家、风格、创作者、速度、拍号、调性及制作软件。左侧浏览轨道，右侧查看插件清单。
+
+### 只读编排
+
+- 左边是轨道，右边是按工程内实际位置和长度排列的 MIDI 块。
+- MIDI 块内绘制音符缩略图，时间标尺以小节显示，支持缩放和横向 / 纵向滚动。
+- 点击片段进行多选，不能拖动、剪切、修改音符或写回工程。
+- 音频轨会保留在轨道列表中，当前不渲染音频波形。
+
+### 通道与插件
+
+- 顶部点击「通道 / 插件」展开底部横向通道区。
+- 每个轨道通道显示加载的 VSTi、插入效果链、发送目标及可识别的目标效果。
+- 左侧选择轨道时，下方自动滚到对应通道并高亮；重复点击与重新展开也会重新定位。
+- 文件夹没有独立通道。无法识别的插件或槽位会显示「无 / 未识别」。
+
+### MIDI 导出
+
+- 选择一个或多个 MIDI 块导出为标准 `.mid`。
+- 导出整轨或全部片段时保留编排位置；单独导出所选片段时从片段内容起点开始。
+- 桌面版使用文件保存对话框；手机优先使用系统分享面板，不支持时下载文件。
+- **产品不提供 MIDI 导入和工程编辑入口，也不覆盖原工程。** `src/lib/midi.ts` 中保留了早期格式研究使用的写入辅助函数，不属于当前产品功能。
+
+## 使用
+
+1. 打开网页或桌面应用，选择 `.song` 文件；桌面浏览器也支持拖放。
+2. 在歌曲首页查看封面与信息，切换「编排 / 走带」查看 MIDI 布局。
+3. 点击左侧轨道，在下方通道区查看相应插件。
+4. 选择片段后导出 MIDI，或导出整个轨道 / 全部编排。
+
+手机可通过浏览器菜单「添加到主屏幕」安装为 PWA。初次加载后可缓存应用资源；离线使用取决于浏览器是否保留缓存，并非自动保存已打开的工程。
+
+## 当前限制
+
+- “走带”指只读编排视图，**不包含音频播放、渲染或 VST 宿主功能**。
+- `.song` 是逆向适配的第三方格式，不保证所有 Studio One / Fender Studio Pro 版本都兼容。旧二进制工程、加密工程、特殊事件类型尚未验证。
+- 当前主要适配含 `Song/song.xml`、`Song/mediapool.xml` 和 `.musicx` 数据的 ZIP 工程。
+- 不渲染音频波形、自动化、和弦轨与歌词；不加载外部音频资源。
+- 复杂速度变化、循环片段、MIDI 控制器 / 表情数据等还需要更多样本验证；当前重点为音符导出，导出使用识别到的单一工程速度。
+- 大型工程需要在内存中解压，手机可用内存较少时可能失败。
+- 桌面包尚未进行商业代码签名 / macOS 公证；macOS 安装包须由 macOS 构建，实际产物以 Release 附件为准。
+
+## 本地开发
+
+需要 Node.js 20+、npm；推荐 Node.js 22。Electron 图形界面需要桌面环境，Linux 无头验证可使用 Xvfb。
 
 ```bash
-npm install
-npm start          # 构建 + 启动 Electron
-npm run dev        # 只跑 Vite（浏览器调试，无原生文件对话框）
+npm ci
+npm run dev       # 浏览器开发模式
+npm run build     # TypeScript 检查 + Vite 生产构建
+npm start         # 构建并启动 Electron
 ```
 
-## 打包
+## 桌面打包
 
 ```bash
-npm run dist:linux   # AppImage + deb
-npm run dist:win     # NSIS 安装包（需在 Windows 或配置 wine）
-npm run dist:mac     # dmg（需在 macOS）
+npm run dist:win    # Windows NSIS；建议在 Windows 构建
+npm run dist:mac    # macOS DMG；必须在 macOS 构建
+npm run dist:linux  # Linux AppImage / deb
 ```
 
-跨平台 CI 见 `.github/workflows/build.yml`。
+产物在 `release/`。跨平台 CI 见 [build.yml](.github/workflows/build.yml)。发布标签后，工作流会把各平台产物附加到私有 Release；不会把仓库改为公开。
 
-本机（Linux arm64）实测产物：
+## Cloudflare Pages 部署
 
-- `release/S1 Toolbox-0.1.0.AppImage`（x64）
-- `release/S1 Toolbox-0.1.0-arm64.AppImage`（arm64）
-- `release/S1 Toolbox-0.1.0-win.zip`（Windows x64 免安装版）
-
-在无网络的构建机上补 Electron 二进制镜像：
+本项目是纯静态应用，无需数据库或服务端。构建输出为 `dist/`。
 
 ```bash
-ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ \
-ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-builder-binaries/ \
-npx electron-builder --linux AppImage --x64
+npm run build
+# 使用环境变量配置 CLOUDFLARE_API_TOKEN 和 CLOUDFLARE_ACCOUNT_ID
+npx wrangler@4 pages deploy dist --project-name=songscope --branch=main
 ```
 
-> Linux arm64 主机无法生成 NSIS 安装包（makensis 只有 x64 二进制）；
-> Windows 用 `--win zip` 出免安装版，安装包交给 CI 的 windows-latest。
-> macOS dmg 必须在 macOS 上构建。
+参考 [Cloudflare Direct Upload 文档](https://developers.cloudflare.com/pages/get-started/direct-upload/)。不要把 API Token、`.env`、本地配置或隧道凭据提交进仓库。
 
-## .song 格式速记
+## 项目结构
 
-`.song` 本质是一个 ZIP：
-
-| 条目 | 内容 |
+| 路径 | 内容 |
 | --- | --- |
-| `Song/song.xml` | 轨道列表、part 元数据、速度/拍号 |
-| `Song/mediapool.xml` | 音频素材池 |
-| `Devices/audiosynthfolder.xml` | 乐器轨的插件实例 |
-| `Devices/musictrackdevice.xml` | 音乐轨通道 / instrumentOut |
-| `Devices/audiomixer.xml` | 调音台通道、Inserts/Sends 效果链 |
+| `src/App.tsx` | 歌曲首页、只读编排、通道联动与导出交互 |
+| `src/lib/song.ts` | 工程 ZIP、XML、元信息及插件路由解析 |
+| `src/lib/musicx.ts` | `.musicx` 音符二进制编解码 |
+| `src/lib/midi.ts` | 标准 MIDI 导出及早期格式研究辅助函数 |
+| `electron/` | 桌面窗口与文件读写桥接 |
+| `public/` | PWA、现用图标、简约图标候选及预览页 |
+| `build/` | 平台图标 PNG / ICO / ICNS |
+| `scripts/` | 合成测试工程、验证与截图辅助脚本 |
+| `fixtures/smoke.song` | 合成测试工程，不含真实用户歌曲 |
 
-轨道位于 `Attributes[x:id=Root]/List[x:id=Tracks]` 下，节点为
-`MediaTrack` / `FolderTrack` / `AutomationTrack`；
-每个 `MediaTrack` 通过 `UID[x:id=channelID]` 关联设备通道。
+## 验证与格式说明
 
-> 注意：不同 Studio One 版本的结构会变。遇到解析不到的内容，请点「导出格式诊断」，把 JSON 发回来即可适配。
-
-## MIDI 导入的安全策略
-
-- 永远另存为 `*-edited.song`，不覆盖原工程
-- 结构上优先克隆**目标轨道已有片段**，保留未知字段，只替换音符
-- 没有可参考片段时退化为最小 `<MusicPart>`，并给出警告
-
-## 开发脚本
+在获得授权的本地真实工程上验证了：44 条非文件夹轨道、70 个 MIDI 块；全部导出后重读为 5927 个音符。测试歌曲不随项目或网页分发。
 
 ```bash
-node scripts/make-fixture.cjs   # 生成测试用 .song
-node scripts/smoke.cjs          # 解析 / MIDI 往返冒烟测试（需要 xvfb）
-node scripts/shot.cjs           # 生成 UI 截图到 shots/
+# 默认使用 /tmp/s1real/song.zip；可用 SONG 指定本地样本
+SONG=/path/to/example.song xvfb-run -a node_modules/.bin/electron --no-sandbox scripts/check-reader.cjs
 ```
 
-## 移动端
+覆盖首页与移动端截图、MIDI 导出重读、轨道 / 通道定位、重复选择和收起重开。部分历史截图脚本针对旧界面，仅作开发记录。
 
-同一个 React 构建既是桌面 Electron 渲染层，也是可安装的 PWA：
+格式笔记：`MusicPart` 保存 `clipID / start / length / offset`（拍）；`mediapool.xml` 中的 `MusicClip mediaID` 指向 `Performances/**/*.musicx`。VSTi 通过乐器输出通道关联，插入与发送保持槽位顺序。
 
-- 响应式布局（≤820px）：顶部统计、横向轨道胶囊、卡片式 MIDI 列表
-- 手机上点「打开 .song」从「文件」选择工程；解析全在浏览器本地完成
-- 导出文件优先走系统分享面板（存到「文件」、AirDrop、微信等），不支持时回退下载
-- 「添加到主屏幕」后可全屏离线使用（Service Worker 缓存）
+## 图标待选
 
-本地起静态服务：
+现用图标尚未替换。A「轨迹」、B「字标」、C「取景」、D「声形」四个简约方向见 `public/brand/candidates/`；`icons.html` 的预选仅存于本机，不会自动更换应用图标。
 
-```bash
-cd dist && python3 -m http.server 18090 --bind 127.0.0.1
-```
+---
 
-再配一个 Cloudflare quick tunnel（或任意 HTTPS 反代）即可在手机上打开。
-PWA 安装要求 HTTPS（localhost 除外）。
-
-## 真实工程格式（Studio One 6/7 / Fender Studio Pro）
-
-以真实工程验证：
-
-- `Song/song.xml`：`List[x:id=Tracks]` 下是 `MediaTrack/FolderTrack`；
-  `MarkerTrack/ChordTrack/ArrangerTrack/LyricsTrack/VideoTrack` 是工具轨，应跳过
-- `MediaTrack` `mediaType="Music"` 为乐器轨，`mediaType="Audio"` 为音频轨
-- `MusicPart` 只存编排信息：`clipID / start / length / offset / timeFormat / name`
-  （单位是**拍**）
-- MIDI 音符不在 song.xml，而在 **`Performances/**/*.musicx`** 二进制文件里；
-  `Song/mediapool.xml` 的 `MusicClip mediaID` 对应 `MusicPart clipID`，
-  `Url url="media:///Performances/..."` 指向压缩包内路径
-- `.musicx` 是带类型标记的 TLV 流：`{` 对象、`[` 数组、`D` float64、`I` int16、
-  `i` varint、`U` uint8、`s` 字符串；事件字段为
-  `start / pitch / noteId / length / velocity`（velocity 为 0–1）
-- 颜色为 `AARRGGBB`（如 `FF2ACAFF`）
-- 速度 `TempoMapSegment tempo` 存的是**每拍秒数**（`0.441176` = 136 BPM）
-
-导入 MIDI 时会：写新的 `.musicx` → 在 mediapool 注册 `MusicClip` →
-在目标轨道 `List[x:id=Events]` 下插入 `MusicPart`，最后另存新工程。
+非 PreSonus / Fender 官方产品，与相关商标所有者无关联。

@@ -38,6 +38,8 @@ export interface S1Track {
   parts: S1Part[];
   instrument: string | null;
   plugins: PluginRef[];
+  inserts: PluginRef[];
+  sends: PluginRef[];
   depth: number;
 }
 
@@ -62,6 +64,8 @@ export interface S1Song {
   /** mediaID -> media:/// path from mediapool.xml */
   mediaPool: Map<string, string>;
   songTitle: string | null;
+  artwork: string | null;
+  metadata: Record<string, string>;
   warnings: string[];
   xmlDocs: Record<string, Document>;
   zip: JSZip;

@@ -44,6 +44,14 @@ export async function readSong(fileName: string, data: ArrayBuffer): Promise<S1S
     throw new Error("这不是有效的 .song：压缩包内找不到 Song/song.xml（文件可能是旧版二进制格式）");
   }
 
+  const metadata: Record<string, string> = {};
+  for (const el of Array.from(xmlDocs["metainfo.xml"]?.getElementsByTagName("Attribute") ?? [])) {
+    const key = attr(el, "id");
+    if (key) metadata[key] = attr(el, "value") ?? "";
+  }
+  const artPath = metadata["Media:Artwork"] || entries.find(n => /(^|\/)artwork\.(png|jpe?g|webp)$/i.test(n));
+  const artEntry = artPath ? findZipEntry(zip, artPath) : null;
+  const artwork = artEntry ? "data:image/" + (/\.png$/i.test(artPath!) ? "png" : /\.webp$/i.test(artPath!) ? "webp" : "jpeg") + ";base64," + await artEntry.async("base64") : null;
   let songTitle = attr(songDoc.documentElement, "name", "title");
   if (!songTitle) {
     const meta = xmlDocs["metainfo.xml"];
@@ -110,7 +118,7 @@ export async function readSong(fileName: string, data: ArrayBuffer): Promise<S1S
     const ch = channels.find((c) => c.uid && c.uid === t.channelId);
     let entry: InstrumentEntry | null = null;
     if (ch?.instrumentOutObjectID) {
-      entry = instruments.find((i) => i.uniqueId === ch.instrumentOutObjectID) ?? null;
+      entry = instruments.find((i) => i.uniqueId === ch.instrumentOutObjectID || i.channelIds.includes(ch.instrumentOutObjectID!)) ?? null;
     }
     if (!entry && ch?.instrumentOutName) {
       entry = instruments.find((i) => i.plugin.name.toLowerCase() === ch.instrumentOutName!.toLowerCase()) ?? null;
@@ -126,6 +134,11 @@ export async function readSong(fileName: string, data: ArrayBuffer): Promise<S1S
     }
     const fx = t.channelId ? channelEffects.get(t.channelId) : undefined;
     if (fx) t.plugins.push(...fx);
+    const mixerId = ch?.instrumentOutObjectID || t.channelId;
+    const mixerFx = mixerId ? channelEffects.get(mixerId) : undefined;
+    if (mixerFx && mixerId !== t.channelId) t.plugins.push(...mixerFx);
+    t.inserts = t.plugins.filter(p => p.category === "Inserts");
+    t.sends = t.plugins.filter(p => p.category === "Sends");
   }
 
   // Folder depth + ordering
@@ -168,7 +181,8 @@ export async function readSong(fileName: string, data: ArrayBuffer): Promise<S1S
     plugins,
     tempo,
     timeSignature,
-    songTitle,
+    songTitle: metadata["Document:Title"] || songTitle,
+    metadata, artwork,
     mediaPool,
     warnings,
     xmlDocs,
@@ -232,6 +246,7 @@ function readTrack(el: Element): S1Track {
     parts,
     instrument: null,
     plugins: [],
+    inserts: [], sends: [],
     depth: 0,
   };
 }
@@ -276,7 +291,7 @@ function readTempo(doc: Document): { tempo: number | null; timeSignature: string
   return { tempo, timeSignature };
 }
 
-interface InstrumentEntry { uniqueId: string | null; plugin: PluginRef }
+interface InstrumentEntry { uniqueId: string | null; channelIds: string[]; plugin: PluginRef }
 
 function readClassInfo(ghost: Element | null | undefined): Partial<PluginRef> {
   if (!ghost) return {};
@@ -309,6 +324,7 @@ function readInstruments(doc: Document | undefined): InstrumentEntry[] {
     const preset = kids(b).find((k) => k.tagName === "String" && xid(k) === "presetPath");
     out.push({
       uniqueId,
+      channelIds: Array.from(b.getElementsByTagName("List")).filter(e => xid(e) === "synthChannels").flatMap(e => Array.from(e.getElementsByTagName("UID")).map(u => attr(u, "uid") || "")),
       plugin: {
         name: ci.name,
         vendor: ci.vendor,
@@ -325,7 +341,7 @@ function readInstruments(doc: Document | undefined): InstrumentEntry[] {
     for (const ghost of Array.from(doc.getElementsByTagName("*"))) {
       if (xid(ghost) !== "ghostData") continue;
       const ci = readClassInfo(ghost);
-      if (ci.name) out.push({ uniqueId: null, plugin: { ...ci, format: "instrument", preset: null } as PluginRef });
+      if (ci.name) out.push({ uniqueId: null, channelIds: [], plugin: { ...ci, format: "instrument", preset: null } as PluginRef });
     }
   }
   return out;
@@ -345,7 +361,7 @@ function readMusicChannels(doc: Document | undefined): MusicChannel[] {
     return {
       uid,
       instrumentOutName: attr(out, "friendlyName"),
-      instrumentOutObjectID: attr(out, "objectID"),
+      instrumentOutObjectID: attr(out, "objectID")?.split("/")[0] ?? null,
     };
   });
 }
@@ -361,10 +377,20 @@ function readChannelEffects(doc: Document | undefined): Map<string, PluginRef[]>
     if (!id || !/^(Inserts|Sends)$/i.test(id)) continue;
     const uid = channelUidOf(el.parentElement ?? el);
     if (!uid) continue;
-    const fx = readFxSlots(el);
+    const fx = readFxSlots(el).map(p => ({ ...p, category: id }));
+    if (id === "Sends") {
+      for (const connection of Array.from(el.getElementsByTagName("Connection"))) {
+        const target = attr(connection, "objectID")?.split("/")[0];
+        const targetChannel = all.find(n => /Channel$/.test(n.tagName) && kids(n).some(u => u.tagName === "UID" && xid(u) === "uniqueID" && attr(u,"uid") === target));
+        const targetInserts = targetChannel ? kids(targetChannel).find(n => xid(n) === "Inserts") : undefined;
+        const targetFx = targetInserts ? readFxSlots(targetInserts) : [];
+        const label = attr(connection,"friendlyName") || (targetChannel && attr(targetChannel,"label")) || "未识别发送目标";
+        fx.push(...(targetFx.length ? targetFx.map(p => ({...p, name: label + " → " + p.name, category: "Sends"})) : [{name: label, format: "effect" as const, category: "Sends"}]));
+      }
+    }
     if (!fx.length) continue;
     const prev = map.get(uid) ?? [];
-    map.set(uid, dedupePlugins([...prev, ...fx]));
+    map.set(uid, [...prev, ...fx]);
   }
 
   // Fallback: all ghostData classInfo entries, unattributed
@@ -396,7 +422,7 @@ function readFxSlots(inserts: Element): PluginRef[] {
   const out: PluginRef[] = [];
   const walk = (node: Element) => {
     for (const k of kids(node)) {
-      const id = xid(k);
+      const id = xid(k) || attr(k, "name");
       if (id && /^FX/i.test(id) && k.tagName === "Attributes") {
         const ghost = kids(k).find((g) => g.tagName === "Attributes" && xid(g) === "ghostData");
         const ci = readClassInfo(ghost);

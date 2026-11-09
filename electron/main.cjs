@@ -4,6 +4,8 @@ const fs = require("fs");
 
 function createWindow() {
   const win = new BrowserWindow({
+    title: "曲镜 · SongScope",
+    icon: path.join(__dirname, "../dist/icon-512.png"),
     width: 1280,
     height: 840,
     minWidth: 960,

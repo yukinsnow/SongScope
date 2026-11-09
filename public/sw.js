@@ -1,5 +1,5 @@
-const CACHE = "s1-toolbox-v2";
-const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon.svg"];
+const CACHE = "songscope-v031";
+const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(CORE)).catch(() => {}));

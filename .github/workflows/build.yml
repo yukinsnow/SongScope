@@ -1,28 +1,49 @@
-name: build
+name: Desktop builds
 on:
   push:
-    tags: ["v*"]
+    tags: ['v*']
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   build:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            target: --linux AppImage --x64
+          - os: windows-latest
+            target: --win zip --x64
+          - os: macos-latest
+            target: --mac dmg --arm64 --x64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
       - run: npm run build
       - name: Package
-        run: npx electron-builder --publish never
+        run: npx electron-builder ${{ matrix.target }} --publish never
         env:
-          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
       - uses: actions/upload-artifact@v4
         with:
-          name: s1-toolbox-${{ matrix.os }}
-          path: release/*
+          name: songscope-${{ matrix.os }}
+          path: |
+            release/*.AppImage
+            release/*.zip
+            release/*.dmg
+          if-no-files-found: error
+      - name: Attach to private Release
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          shopt -s nullglob
+          files=(release/*.AppImage release/*.zip release/*.dmg)
+          gh release upload "$GITHUB_REF_NAME" "${files[@]}" --clobber
