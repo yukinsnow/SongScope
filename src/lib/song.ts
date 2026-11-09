@@ -4,7 +4,7 @@ import {
   attr, byXid, child, childByXid, children, descendants, firstByXid, kids,
   parseXml, s1Color, xid,
 } from "./xml";
-import { countNotes, detectNoteSchema, readNotes } from "./notes";
+import { decodeMusicx } from "./musicx";
 
 const XML_ENTRIES = [
   "Song/song.xml",
@@ -57,13 +57,16 @@ export async function readSong(fileName: string, data: ArrayBuffer): Promise<S1S
     }
   }
   const { tempo, timeSignature } = readTempo(songDoc);
+  const mediaPool = readMediaPool(xmlDocs["Song/mediapool.xml"]);
 
   // ---------- tracks ----------
   const trackList = findTrackList(songDoc);
   const tracks: S1Track[] = [];
   if (trackList) {
+    const SKIP = new Set(["MarkerTrack", "ChordTrack", "ArrangerTrack", "LyricsTrack", "VideoTrack"]);
     for (const el of kids(trackList)) {
       if (!/Track$/.test(el.tagName)) continue;
+      if (SKIP.has(el.tagName)) continue;
       const track = readTrack(el);
       tracks.push(track);
     }
@@ -73,6 +76,29 @@ export async function readSong(fileName: string, data: ArrayBuffer): Promise<S1S
       if (/^(MediaTrack|FolderTrack|AutomationTrack)$/.test(el.tagName)) tracks.push(readTrack(el));
     }
     warnings.push("未找到 List[x:id=Tracks]，已回退到全文档扫描。");
+  }
+
+  // ---------- MIDI content (.musicx) ----------
+  for (const t of tracks) {
+    for (const p of t.parts) {
+      if (!p.clipId) continue;
+      const url = mediaPool.get(p.clipId);
+      if (!url) continue;
+      const path = url.replace(/^media:\/+/, "").replace(/^\/+/, "");
+      p.mediaPath = path;
+      const entry = findZipEntry(zip, path);
+      if (!entry) {
+        warnings.push("缺少 MIDI 数据文件: " + path);
+        continue;
+      }
+      try {
+        const doc = decodeMusicx(await entry.async("uint8array"));
+        p.notes = doc.events;
+        p.noteCount = doc.events.length;
+      } catch (e) {
+        warnings.push(path + ": " + (e as Error).message);
+      }
+    }
   }
 
   // ---------- plugin model ----------
@@ -143,6 +169,7 @@ export async function readSong(fileName: string, data: ArrayBuffer): Promise<S1S
     tempo,
     timeSignature,
     songTitle,
+    mediaPool,
     warnings,
     xmlDocs,
     zip,
@@ -185,8 +212,12 @@ function readTrack(el: Element): S1Track {
     name: attr(p, "name") ?? "Part",
     start: numAttr(p, "start", "position", "startTime"),
     length: numAttr(p, "length", "duration"),
+    offset: numAttr(p, "offset") ?? 0,
+    timeFormat: numAttr(p, "timeFormat") ?? 2,
+    notes: [],
+    noteCount: 0,
+    mediaPath: null,
     element: p,
-    noteCount: countNotes(p),
   }));
 
   return {
@@ -220,7 +251,11 @@ function readTempo(doc: Document): { tempo: number | null; timeSignature: string
     if (tempo === null) {
       const v = attr(el, "tempo");
       const n = v !== null ? Number(v) : NaN;
-      if (Number.isFinite(n) && n >= 20 && n <= 400) tempo = n;
+      // Studio One stores tempo as seconds-per-beat (e.g. 0.441176 = 136 BPM)
+      if (Number.isFinite(n)) {
+        if (n > 0 && n < 10) tempo = 60 / n;
+        else if (n >= 20 && n <= 400) tempo = n;
+      }
     }
     if (tempo === null && (/tempo/i.test(xid(el) ?? "") || /^Tempo$/i.test(el.tagName))) {
       const n = Number(attr(el, "value", "bpm", "tempo"));
@@ -374,6 +409,33 @@ function readFxSlots(inserts: Element): PluginRef[] {
   return out;
 }
 
+function readMediaPool(doc: Document | undefined): Map<string, string> {
+  const map = new Map<string, string>();
+  if (!doc) return map;
+  for (const clip of Array.from(doc.getElementsByTagName("MusicClip"))) {
+    const id = attr(clip, "mediaID", "clipID", "id");
+    if (!id) continue;
+    const urlEl = kids(clip).find((k) => k.tagName === "Url" && xid(k) === "dataPath")
+      ?? clip.getElementsByTagName("Url")[0];
+    const url = attr(urlEl, "url");
+    if (url) map.set(id, url);
+  }
+  return map;
+}
+
+function findZipEntry(zip: JSZip, path: string): JSZip.JSZipObject | null {
+  const direct = zip.file(path);
+  if (direct) return direct;
+  const decoded = decodeURIComponent(path);
+  const byDecoded = zip.file(decoded);
+  if (byDecoded) return byDecoded;
+  const needle = decoded.toLowerCase();
+  for (const name of Object.keys(zip.files)) {
+    if (name.toLowerCase() === needle) return zip.files[name];
+  }
+  return null;
+}
+
 export function dedupePlugins(list: PluginRef[]): PluginRef[] {
   const seen = new Map<string, PluginRef>();
   for (const p of list) {
@@ -386,4 +448,3 @@ export function dedupePlugins(list: PluginRef[]): PluginRef[] {
   return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export { detectNoteSchema, readNotes };

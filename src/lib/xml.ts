@@ -65,10 +65,12 @@ export function descendants(el: Element, tag: string): Element[] {
 
 export function s1Color(v: string | null | undefined): string | null {
   if (!v) return null;
+  // Modern Studio One stores AARRGGBB (e.g. "FF2ACAFF").
+  if (/^[0-9A-Fa-f]{8}$/.test(v.trim())) return "#" + v.trim().slice(2);
   const n = Number(v);
   if (!Number.isFinite(n)) return null;
   const hex = (n >>> 0).toString(16).padStart(8, "0");
-  // Studio One stores AABBGGRR
+  // Legacy signed ints: AABBGGRR
   const bb = hex.slice(2, 4), gg = hex.slice(4, 6), rr = hex.slice(6, 8);
   return "#" + rr + gg + bb;
 }

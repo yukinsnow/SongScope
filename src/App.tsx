@@ -5,6 +5,8 @@ import { exportPartsToMidi, importMidiInto, partNotes, type PartRef } from "./li
 import { buildDiagnostics } from "./lib/diagnostics";
 import { fmtNum } from "./lib/xml";
 
+const num = (v: number | null | undefined) => (v === null || v === undefined ? "—" : fmtNum(Number(v.toFixed ? v.toFixed(3) : v)));
+
 type Tab = "overview" | "tracks" | "plugins" | "midi";
 
 const TYPE_LABEL: Record<string, string> = {
@@ -21,12 +23,24 @@ async function saveFile(defaultName: string, data: Uint8Array, mime = "applicati
     const p = await window.s1.saveFile({ defaultName, data });
     return p ?? null;
   }
+  // Mobile: hand the file to the system share sheet (Files / AirDrop / WeChat …)
+  try {
+    const file = new File([data as BlobPart], defaultName, { type: mime });
+    const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
+    if (nav.canShare?.({ files: [file] }) && navigator.share) {
+      await navigator.share({ files: [file], title: defaultName });
+      return defaultName;
+    }
+  } catch {
+    /* user cancelled the share sheet, fall through to download */
+  }
   const url = URL.createObjectURL(bytesToBlob(data, mime));
   const a = document.createElement("a");
   a.href = url;
   a.download = defaultName;
+  a.rel = "noopener";
   a.click();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
   return defaultName;
 }
 
@@ -131,7 +145,7 @@ export default function App() {
       if (!notes) {
         flash("这些片段里没有可识别的音符数据，已生成空 MIDI 供格式诊断");
       }
-      const bytes = exportPartsToMidi(refs, { unit: "auto", merge: false });
+      const bytes = exportPartsToMidi(refs, { merge: false, tempo: song.tempo });
       const saved = await saveFile(label.replace(/[\\/:*?"<>|]/g, "_") + ".mid", bytes, "audio/midi");
       setToast("已导出 " + refs.length + " 个片段（" + notes + " 个音符）" + (saved ? " → " + saved : ""));
     } finally {
@@ -196,7 +210,7 @@ export default function App() {
           if (f) handleFile(f);
         }}
       >
-        <input ref={fileInput} type="file" accept=".song" hidden onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
+        <input ref={fileInput} type="file" accept="*/*" hidden onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
         <div className="logo">S1<span>TOOLBOX</span></div>
         <h1>拆开你的 Studio One 工程</h1>
         <p className="sub">本地解析 .song 压缩包 · 轨道 / 插件 / MIDI 片段一目了然。文件不会上传。</p>
@@ -305,7 +319,7 @@ export default function App() {
             {tab === "plugins" && (
               <div className="panel">
                 <h3>工程内插件（{pluginUsage.length}）</h3>
-                <table className="grid">
+                <div className="tableWrap"><table className="grid pluginTable">
                   <thead><tr><th>插件</th><th>类型</th><th>分类</th><th>厂商</th><th>使用轨道</th></tr></thead>
                   <tbody>
                     {pluginUsage.map(({ plugin, tracks }) => (
@@ -318,7 +332,7 @@ export default function App() {
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </table></div>
                 {!pluginUsage.length && <p className="empty">没有解析到插件信息</p>}
               </div>
             )}
@@ -337,7 +351,7 @@ export default function App() {
                     </div>
                   </div>
                   <p className="note">勾选片段后导出为标准 MIDI 文件。音频事件不参与导出；没有音符数据的片段会导出为空轨。</p>
-                  <table className="grid">
+                  <div className="tableWrap"><table className="grid midiTable">
                     <thead><tr><th></th><th>片段</th><th>轨道</th><th>起点</th><th>长度</th><th>音符</th><th></th></tr></thead>
                     <tbody>
                       {allParts.map((r, i) => (
@@ -345,14 +359,14 @@ export default function App() {
                           <td><input type="checkbox" checked={!!r.part.clipId && pickedPartIds.has(r.part.clipId)} onChange={() => togglePart(r.part.clipId)} /></td>
                           <td className="strong">{r.part.name}</td>
                           <td className="dim">{r.track.name}</td>
-                          <td>{r.part.start ?? "—"}</td>
-                          <td>{r.part.length ?? "—"}</td>
+                          <td>{num(r.part.start)}</td>
+                          <td>{num(r.part.length)}</td>
                           <td>{r.part.noteCount || "—"}</td>
                           <td><button className="mini" onClick={() => doExport([r], (r.track.name + "-" + r.part.name))}>导出</button></td>
                         </tr>
                       ))}
                     </tbody>
-                  </table>
+                  </table></div>
                   {!allParts.length && <p className="empty">这个工程里没有 MIDI 片段（可能是纯音频工程）</p>}
                 </section>
 
@@ -436,20 +450,20 @@ function TrackDetail({ track }: { track: S1Track }) {
         </Card>
       </div>
       <h3>MIDI 片段</h3>
-      <table className="grid">
+      <div className="tableWrap"><table className="grid partTable">
         <thead><tr><th>名称</th><th>clipID</th><th>起点</th><th>长度</th><th>音符</th></tr></thead>
         <tbody>
           {track.parts.map((p, i) => (
             <tr key={i}>
               <td className="strong">{p.name}</td>
               <td className="dim mono">{p.clipId || "—"}</td>
-              <td>{p.start ?? "—"}</td>
-              <td>{p.length ?? "—"}</td>
+              <td>{num(p.start)}</td>
+              <td>{num(p.length)}</td>
               <td>{p.noteCount || "—"}</td>
             </tr>
           ))}
         </tbody>
-      </table>
+      </table></div>
       {!track.parts.length && <p className="empty">这条轨道没有 MIDI 片段</p>}
     </div>
   );

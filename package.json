@@ -1,7 +1,7 @@
 {
   "name": "s1-toolbox",
   "productName": "S1 Toolbox",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Studio One / Fender Studio Pro .song inspector with MIDI part export & import",
   "main": "electron/main.cjs",
   "private": true,

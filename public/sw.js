@@ -1,0 +1,41 @@
+const CACHE = "s1-toolbox-v2";
+const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon.svg"];
+
+self.addEventListener("install", (e) => {
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(CORE)).catch(() => {}));
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", (e) => {
+  e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))));
+  self.clients.claim();
+});
+
+self.addEventListener("fetch", (e) => {
+  const req = e.request;
+  if (req.method !== "GET" || new URL(req.url).origin !== location.origin) return;
+
+  // Navigations: network first so updates land immediately, cache as offline fallback.
+  if (req.mode === "navigate") {
+    e.respondWith(
+      fetch(req).then((res) => {
+        const copy = res.clone();
+        caches.open(CACHE).then((c) => c.put("./index.html", copy)).catch(() => {});
+        return res;
+      }).catch(() => caches.match("./index.html"))
+    );
+    return;
+  }
+
+  // Assets: cache first, refresh in background.
+  e.respondWith(
+    caches.match(req).then((hit) => {
+      const refresh = fetch(req).then((res) => {
+        const copy = res.clone();
+        caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+        return res;
+      }).catch(() => hit);
+      return hit || refresh;
+    })
+  );
+});

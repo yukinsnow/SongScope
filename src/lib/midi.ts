@@ -1,7 +1,7 @@
 import { Midi } from "@tonejs/midi";
 import type { NoteEvent, S1Part, S1Song, S1Track } from "./types";
-import { detectNoteSchema, readNotes, guessUnit } from "./notes";
-import { attr, newGuid, xid, kids } from "./xml";
+import { encodeMusicx } from "./musicx";
+import { attr, newGuid, xid, kids, child } from "./xml";
 
 const DEFAULT_PPQ = 480;
 
@@ -11,54 +11,58 @@ export interface PartRef {
 }
 
 export interface ExportOptions {
-  /** "auto" inspects part length; ticks keeps raw values; beats multiplies by PPQ. */
-  unit?: "auto" | "ticks" | "beats";
-  /** merge all parts into a single MIDI track */
+  /** merge all parts into one MIDI track */
   merge?: boolean;
+  /** shift notes by the arrangement position of the part instead of exporting clip content at 0 */
+  arrange?: boolean;
+  tempo?: number | null;
 }
 
 export function partNotes(part: S1Part): NoteEvent[] {
-  const schema = detectNoteSchema(part.element);
-  return schema ? readNotes(part.element, schema) : [];
+  return part.notes;
+}
+
+/** Notes relative to the part's left edge (clipped to the part window). */
+export function partRelativeNotes(part: S1Part): NoteEvent[] {
+  const off = part.offset || 0;
+  const len = part.length ?? Infinity;
+  return part.notes
+    .map((n) => ({ ...n, start: n.start - off }))
+    .filter((n) => n.start + n.length >= 0 && n.start < len)
+    .map((n) => ({ ...n, start: Math.max(0, n.start) }));
 }
 
 export function exportPartsToMidi(refs: PartRef[], opts: ExportOptions = {}): Uint8Array {
   const midi = new Midi();
-  const PPQ = midi.header.ppq || DEFAULT_PPQ;
-  const first = refs[0];
-  if (first?.track) {
-    midi.header.setTempo(120);
-  }
+  const ppq = midi.header.ppq || DEFAULT_PPQ;
+  midi.header.setTempo(opts.tempo && opts.tempo >= 20 && opts.tempo <= 400 ? opts.tempo : 120);
 
   const merged = opts.merge ? midi.addTrack() : null;
   if (merged) merged.name = "S1 Parts";
 
   for (const ref of refs) {
-    const notes = partNotes(ref.part);
+    const notes = partRelativeNotes(ref.part);
     if (!notes.length) continue;
-    const unit = opts.unit && opts.unit !== "auto" ? opts.unit : guessUnit(ref.part.length, notes);
-    const scale = unit === "beats" ? PPQ : 1;
+    const shift = opts.arrange ? (ref.part.start ?? 0) : 0;
     const tr = merged ?? midi.addTrack();
     if (!merged) tr.name = ref.part.name || ref.track.name || "Part";
     for (const n of notes) {
       tr.addNote({
         midi: n.pitch,
         velocity: Math.max(1, Math.min(127, n.velocity)) / 127,
-        ticks: Math.max(0, Math.round(n.start * scale)),
-        durationTicks: Math.max(1, Math.round(n.length * scale)),
+        ticks: Math.max(0, Math.round((n.start + shift) * ppq)),
+        durationTicks: Math.max(1, Math.round(n.length * ppq)),
       });
     }
   }
 
-  if (!midi.tracks.length) {
-    // still emit a valid, empty MIDI file so users can chain exporters
-    midi.addTrack();
-  }
+  if (!midi.tracks.length) midi.addTrack();
   return new Uint8Array(midi.toArray());
 }
 
 export interface ImportOptions {
   targetTrackId: string;
+  /** arrangement position in MIDI ticks (PPQ 480) */
   startTick?: number;
   partName?: string;
 }
@@ -70,7 +74,7 @@ export interface ImportResult {
   warnings: string[];
 }
 
-export function midiNotesFromBytes(bytes: ArrayBuffer): { notes: NoteEvent[]; name: string | null; trackCount: number } {
+export function midiNotesFromBytes(bytes: ArrayBuffer): { notes: NoteEvent[]; name: string | null; trackCount: number; ppq: number } {
   const midi = new Midi(bytes);
   const notes: NoteEvent[] = [];
   let name: string | null = null;
@@ -80,13 +84,13 @@ export function midiNotesFromBytes(bytes: ArrayBuffer): { notes: NoteEvent[]; na
       notes.push({
         pitch: n.midi,
         velocity: Math.max(1, Math.round(n.velocity * 127)),
-        start: Math.round(n.ticks),
-        length: Math.max(1, Math.round(n.durationTicks)),
+        start: n.ticks,
+        length: Math.max(1, n.durationTicks),
       });
     }
   }
   notes.sort((a, b) => a.start - b.start);
-  return { notes, name, trackCount: midi.tracks.length };
+  return { notes, name, trackCount: midi.tracks.length, ppq: midi.header.ppq || DEFAULT_PPQ };
 }
 
 export async function importMidiInto(
@@ -95,109 +99,108 @@ export async function importMidiInto(
   opts: ImportOptions,
 ): Promise<ImportResult> {
   const warnings: string[] = [];
-  const { notes, name } = midiNotesFromBytes(midiBytes);
+  const { notes, name, ppq } = midiNotesFromBytes(midiBytes);
   if (!notes.length) throw new Error("这个 MIDI 文件里没有音符。");
 
   const track = song.tracks.find((t) => t.id === opts.targetTrackId);
   if (!track) throw new Error("找不到目标轨道。");
 
-  const doc = song.xmlDocs["Song/song.xml"];
-  if (!doc) throw new Error("song.xml 未加载。");
+  const songDoc = song.xmlDocs["Song/song.xml"];
+  if (!songDoc) throw new Error("song.xml 未加载。");
+  const poolDoc = song.xmlDocs["Song/mediapool.xml"];
 
-  // Prefer a part on the target track as the structural template.
-  const ownPart = track.parts[0]?.element ?? null;
-  const template = ownPart ?? song.tracks.flatMap((t) => t.parts)[0]?.element ?? null;
+  const scale = 1 / ppq; // ticks -> beats
+  const beatNotes: NoteEvent[] = notes.map((n) => ({
+    pitch: n.pitch,
+    velocity: n.velocity,
+    start: n.start * scale,
+    length: Math.max(0.01, n.length * scale),
+  }));
+  const partStart = Math.max(0, (opts.startTick ?? 0) * scale);
+  const partLength = Math.max(...beatNotes.map((n) => n.start + n.length));
+  const partName = opts.partName || name || "Imported MIDI";
 
-  const start = Math.max(0, Math.round(opts.startTick ?? 0));
-  const end = notes.reduce((m, n) => Math.max(m, start + n.start + n.length), 0);
-  const length = Math.max(1, end - start);
+  // 1) new MIDI performance file
+  const mediaID = newGuid();
+  const seq = nextImportIndex(song.zipEntries);
+  const mediaPath = "Performances/Imported/Imported(" + seq + ").musicx";
+  song.zip.file(mediaPath, encodeMusicx(beatNotes, 2));
 
-  let part: Element;
-  let schema = template ? detectNoteSchema(template) : null;
-
-  if (template) {
-    part = template.cloneNode(true) as Element;
-    regenerateUids(part);
-    setAttrIfPresent(part, ["clipID", "id"], newGuid());
-    setAttrIfPresent(part, ["name"], opts.partName || name || "Imported MIDI");
-    setAttrIfPresent(part, ["start", "position", "startTime"], String(start));
-    setAttrIfPresent(part, ["length", "duration"], String(length));
-    // Remove template notes (and their containers' note children only)
-    if (schema) {
-      for (const old of Array.from(part.getElementsByTagName(schema.tag))) old.remove();
-    }
-    if (!schema) {
-      schema = {
-        tag: "Note",
-        pitchAttr: "pitch",
-        velocityAttr: "velocity",
-        startAttr: "start",
-        lengthAttr: "length",
-        childStyle: false,
-      };
-      warnings.push("工程里没有可参考的音符结构，已按通用 <Note> 结构写入，可能需要在 Studio One 里检查。");
-    }
+  // 2) register in mediapool.xml
+  if (poolDoc) {
+    const clip = poolDoc.createElement("MusicClip");
+    clip.setAttribute("mediaID", mediaID);
+    clip.setAttribute("useCount", "1");
+    const url = poolDoc.createElement("Url");
+    url.setAttribute("x:id", "dataPath");
+    url.setAttribute("type", "1");
+    url.setAttribute("url", "media:///" + mediaPath);
+    clip.appendChild(url);
+    const folder = findMusicFolder(poolDoc);
+    folder.appendChild(clip);
+    writeXml(song, "Song/mediapool.xml", poolDoc);
   } else {
-    part = doc.createElement("MusicPart");
-    part.setAttribute("clipID", newGuid());
-    part.setAttribute("name", opts.partName || name || "Imported MIDI");
-    part.setAttribute("start", String(start));
-    part.setAttribute("length", String(length));
-    schema = {
-      tag: "Note",
-      pitchAttr: "pitch",
-      velocityAttr: "velocity",
-      startAttr: "start",
-      lengthAttr: "length",
-      childStyle: false,
-    };
-    warnings.push("目标工程没有任何 MusicPart，已创建最小结构；建议先在 Studio One 里建一个空 MIDI 片段再试。");
+    warnings.push("工程里没有 mediapool.xml，未注册 MediaPool 条目。");
   }
 
-  for (const n of notes) {
-    const el = doc.createElement(schema.tag);
-    el.setAttribute(schema.pitchAttr, String(n.pitch));
-    if (schema.velocityAttr) el.setAttribute(schema.velocityAttr, String(n.velocity));
-    if (schema.startAttr) el.setAttribute(schema.startAttr, String(n.start));
-    if (schema.lengthAttr) el.setAttribute(schema.lengthAttr, String(n.length));
-    part.appendChild(el);
-  }
+  // 3) new MusicPart on the target track
+  const part = songDoc.createElement("MusicPart");
+  part.setAttribute("transpose", "0");
+  part.setAttribute("velocity", "0");
+  part.setAttribute("clipID", mediaID);
+  part.setAttribute("start", trimNum(partStart));
+  part.setAttribute("timeFormat", "2");
+  part.setAttribute("length", trimNum(partLength));
+  part.setAttribute("offset", "0");
+  part.setAttribute("name", partName);
+  const attrs = songDoc.createElement("Attributes");
+  attrs.setAttribute("x:id", "attributes");
+  if (track.id) attrs.setAttribute("trackID", track.id);
+  part.appendChild(attrs);
 
-  if (ownPart?.parentElement) {
-    ownPart.parentElement.insertBefore(part, ownPart.nextSibling);
-  } else {
-    const list = kids(track.element).find((k) => k.tagName === "List") ?? track.element;
-    list.appendChild(part);
-  }
+  const eventsList = findEventsList(track.element) ?? kids(track.element).find((k) => k.tagName === "List");
+  (eventsList ?? track.element).appendChild(part);
+  writeXml(song, "Song/song.xml", songDoc);
 
-  const xml = new XMLSerializer().serializeToString(doc);
-  const withDecl = xml.startsWith("<?xml") ? xml : '<?xml version="1.0" encoding="UTF-8"?>\n' + xml;
-  song.zip.file("Song/song.xml", withDecl);
   const bytes = await song.zip.generateAsync({ type: "uint8array", compression: "DEFLATE" });
-
   return {
     bytes,
     fileName: song.fileName.replace(/\.song$/i, "") + "-edited.song",
-    noteCount: notes.length,
+    noteCount: beatNotes.length,
     warnings,
   };
 }
 
-function setAttrIfPresent(el: Element, names: string[], value: string) {
-  for (const n of names) {
-    if (el.hasAttribute(n)) {
-      el.setAttribute(n, value);
-      return;
-    }
-  }
+function writeXml(song: S1Song, entry: string, doc: Document) {
+  const xml = new XMLSerializer().serializeToString(doc);
+  const withDecl = xml.startsWith("<?xml") ? xml : '<?xml version="1.0" encoding="UTF-8"?>\n' + xml;
+  song.zip.file(entry, withDecl);
 }
 
-function regenerateUids(root: Element) {
-  const guidRe = /^\{[0-9A-Fa-f-]{36}\}$/;
-  for (const el of Array.from(root.getElementsByTagName("*"))) {
-    if (el.tagName === "UID" || xid(el) === "uniqueID") {
-      const cur = attr(el, "uid");
-      if (cur && guidRe.test(cur)) el.setAttribute("uid", newGuid());
-    }
+function findMusicFolder(doc: Document): Element {
+  for (const el of Array.from(doc.getElementsByTagName("MediaFolder"))) {
+    if ((attr(el, "name") ?? "").toLowerCase() === "music") return el;
   }
+  for (const el of Array.from(doc.getElementsByTagName("MediaFolder"))) {
+    if (el.getElementsByTagName("MusicClip").length) return el;
+  }
+  const first = doc.getElementsByTagName("MediaFolder")[0];
+  return first ?? doc.documentElement;
+}
+
+function findEventsList(track: Element): Element | null {
+  return kids(track).find((k) => k.tagName === "List" && xid(k) === "Events") ?? null;
+}
+
+function nextImportIndex(entries: string[]): number {
+  let max = -1;
+  for (const e of entries) {
+    const m = /Performances\/Imported\/Imported\((\d+)\)\.musicx$/i.exec(e);
+    if (m) max = Math.max(max, Number(m[1]));
+  }
+  return max + 1;
+}
+
+function trimNum(n: number): string {
+  return Number.isInteger(n) ? String(n) : String(Number(n.toFixed(9)));
 }

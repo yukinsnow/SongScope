@@ -12,10 +12,18 @@ export type TrackType =
 export interface S1Part {
   clipId: string | null;
   name: string;
+  /** arrangement position, in beats */
   start: number | null;
+  /** part length, in beats */
   length: number | null;
-  element: Element;
+  /** content offset inside the source clip, in beats */
+  offset: number;
+  timeFormat: number;
+  /** notes decoded from the referenced .musicx */
+  notes: NoteEvent[];
   noteCount: number;
+  mediaPath: string | null;
+  element: Element;
 }
 
 export interface S1Track {
@@ -51,6 +59,8 @@ export interface S1Song {
   plugins: PluginRef[];
   tempo: number | null;
   timeSignature: string | null;
+  /** mediaID -> media:/// path from mediapool.xml */
+  mediaPool: Map<string, string>;
   songTitle: string | null;
   warnings: string[];
   xmlDocs: Record<string, Document>;

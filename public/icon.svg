@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#14161a"/>
+  <rect x="40" y="40" width="432" height="432" rx="72" fill="none" stroke="#2e343d" stroke-width="8"/>
+  <text x="96" y="300" font-family="ui-monospace, Menlo, monospace" font-weight="800" font-size="190" fill="#ffffff">S1</text>
+  <rect x="300" y="196" width="120" height="16" rx="8" fill="#ff8a3d"/>
+  <rect x="300" y="238" width="86" height="16" rx="8" fill="#ff8a3d" opacity=".7"/>
+  <rect x="300" y="280" width="120" height="16" rx="8" fill="#ff8a3d" opacity=".45"/>
+  <text x="96" y="392" font-family="-apple-system, sans-serif" font-size="34" fill="#8b93a1" letter-spacing="8">TOOLBOX</text>
+</svg>

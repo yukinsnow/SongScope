@@ -78,3 +78,42 @@ node scripts/make-fixture.cjs   # 生成测试用 .song
 node scripts/smoke.cjs          # 解析 / MIDI 往返冒烟测试（需要 xvfb）
 node scripts/shot.cjs           # 生成 UI 截图到 shots/
 ```
+
+## 移动端
+
+同一个 React 构建既是桌面 Electron 渲染层，也是可安装的 PWA：
+
+- 响应式布局（≤820px）：顶部统计、横向轨道胶囊、卡片式 MIDI 列表
+- 手机上点「打开 .song」从「文件」选择工程；解析全在浏览器本地完成
+- 导出文件优先走系统分享面板（存到「文件」、AirDrop、微信等），不支持时回退下载
+- 「添加到主屏幕」后可全屏离线使用（Service Worker 缓存）
+
+本地起静态服务：
+
+```bash
+cd dist && python3 -m http.server 18090 --bind 127.0.0.1
+```
+
+再配一个 Cloudflare quick tunnel（或任意 HTTPS 反代）即可在手机上打开。
+PWA 安装要求 HTTPS（localhost 除外）。
+
+## 真实工程格式（Studio One 6/7 / Fender Studio Pro）
+
+以真实工程验证：
+
+- `Song/song.xml`：`List[x:id=Tracks]` 下是 `MediaTrack/FolderTrack`；
+  `MarkerTrack/ChordTrack/ArrangerTrack/LyricsTrack/VideoTrack` 是工具轨，应跳过
+- `MediaTrack` `mediaType="Music"` 为乐器轨，`mediaType="Audio"` 为音频轨
+- `MusicPart` 只存编排信息：`clipID / start / length / offset / timeFormat / name`
+  （单位是**拍**）
+- MIDI 音符不在 song.xml，而在 **`Performances/**/*.musicx`** 二进制文件里；
+  `Song/mediapool.xml` 的 `MusicClip mediaID` 对应 `MusicPart clipID`，
+  `Url url="media:///Performances/..."` 指向压缩包内路径
+- `.musicx` 是带类型标记的 TLV 流：`{` 对象、`[` 数组、`D` float64、`I` int16、
+  `i` varint、`U` uint8、`s` 字符串；事件字段为
+  `start / pitch / noteId / length / velocity`（velocity 为 0–1）
+- 颜色为 `AARRGGBB`（如 `FF2ACAFF`）
+- 速度 `TempoMapSegment tempo` 存的是**每拍秒数**（`0.441176` = 136 BPM）
+
+导入 MIDI 时会：写新的 `.musicx` → 在 mediapool 注册 `MusicClip` →
+在目标轨道 `List[x:id=Events]` 下插入 `MusicPart`，最后另存新工程。
