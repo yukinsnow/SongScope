@@ -8,8 +8,8 @@ SongScope 是一个只读歌曲浏览器：不需要安装工程里的 VST 插�
 
 ## 网页版
 
-- 应用：<https://songscope.pages.dev>
-- 简约图标候选：<https://songscope.pages.dev/icons.html>
+- 应用：<https://songscope.response.run>
+- 简约图标候选：<https://songscope.response.run/icons.html>
 - 桌面下载：本仓库的 [Releases](../../releases)，需要具有仓库访问权限。
 
 ## 功能
@@ -35,7 +35,7 @@ SongScope 是一个只读歌曲浏览器：不需要安装工程里的 VST 插�
 ### MIDI 导出
 
 - 选择一个或多个 MIDI 块导出为标准 `.mid`。
-- 导出整轨或全部片段时保留编排位置；单独导出所选片段时从片段内容起点开始。
+- 导出整轨或全部片段时保留编排位置；单片段导出时以片段起点归零，多片段导出保留编排位置。速度 / 拍号节点同时写入 MIDI conductor track；单片段会从所在位置的有效速度 / 拍号开始。
 - 桌面版使用文件保存对话框；手机优先使用系统分享面板，不支持时下载文件。
 - **产品不提供 MIDI 导入和工程编辑入口，也不覆盖原工程。** `src/lib/midi.ts` 中保留了早期格式研究使用的写入辅助函数，不属于当前产品功能。
 
@@ -54,7 +54,7 @@ SongScope 是一个只读歌曲浏览器：不需要安装工程里的 VST 插�
 - `.song` 是逆向适配的第三方格式，不保证所有 Studio One / Fender Studio Pro 版本都兼容。旧二进制工程、加密工程、特殊事件类型尚未验证。
 - 当前主要适配含 `Song/song.xml`、`Song/mediapool.xml` 和 `.musicx` 数据的 ZIP 工程。
 - 不渲染音频波形、自动化、和弦轨与歌词；不加载外部音频资源。
-- 复杂速度变化、循环片段、MIDI 控制器 / 表情数据等还需要更多样本验证；当前重点为音符导出，导出使用识别到的单一工程速度。
+- 已读取全部速度 / 拍号节点、按变拍号绘制小节线并随 MIDI 导出；曲线变速保留原始节点与 curveType，连续曲线目前按节点阶梯近似并明确提示。循环片段、MIDI 控制器 / 表情数据等仍需要更多样本验证。
 - 大型工程需要在内存中解压，手机可用内存较少时可能失败。
 - 桌面包尚未进行商业代码签名 / macOS 公证；macOS 安装包须由 macOS 构建，实际产物以 Release 附件为准。
 
@@ -79,17 +79,43 @@ npm run dist:linux  # Linux AppImage / deb
 
 产物在 `release/`。跨平台 CI 见 [build.yml](.github/workflows/build.yml)。发布标签后，工作流会把各平台产物附加到私有 Release；不会把仓库改为公开。
 
-## Cloudflare Pages 部署
+## 快捷键
 
-本项目是纯静态应用，无需数据库或服务端。构建输出为 `dist/`。
+| 按键 | 功能 |
+| --- | --- |
+| F1 | 显示 / 隐藏帮助 |
+| F2 | 显示 / 隐藏只读 MIDI 查看区 |
+| F3 | 显示 / 隐藏底部混音台 |
+| Esc | 关闭帮助 |
+
+采用 [Studio One 常用快捷键布局](https://pae-web.presonusmusic.com/downloads/products/pdf/STUDIO_ONE_-_KEY_COMMANDS_SHEET.pdf)；F2 仅查看，不编辑。Mac 可能需要 Fn。输入框、修饰键组合与按键连发不会触发这些切换。
+
+## 乐器预设名
+
+- 直接读取工程内保存的 VST3 / VST2 插件状态，不安装或运行插件，也不查找外部采样文件。
+- Serum 2：读取 XferJson 元数据中的预设名，已在授权真实工程中验证两个实例。
+- Serum / 通用 VST2：在保存了 FXP program name 的情况下读取该字段。
+- Kontakt：读取可见预设 / 快照元数据及 `.nki` / `.nkm` / `.nksn` 文件引用，多条可同时显示。文件引用明确标注，不等同于运行时音色加载验证；尚无用户真实 Kontakt 工程验证。
+- 不把 S1 自动生成的 `3 - Serum 2.vstpreset` 等缓存文件名冒充音色名。压缩、加密、未知私有状态或未保存名称时显示「未识别」。
+
+## Cloudflare Pages 部署（原生 Git 集成）
+
+- 正式域名：<https://songscope.response.run>
+- Pages 项目：`songscope-web`，源仓库：`yukinsnow/SongScope`（保持私有）。
+- 生产分支：`main`；构建命令：`npm run build`；输出：`dist/`。
+- 环境变量：`NODE_VERSION=22`、`ELECTRON_SKIP_BINARY_DOWNLOAD=1`（仅网页构建无需下载 Electron）。
+- 推送 main 后由 Cloudflare 自动拉取、构建、部署，不再手动上传 dist；API Token 不进入仓库或网页。
+- 原直传项目 `songscope.pages.dev` 保留作历史地址，不再更新。根据 [Cloudflare 文档](https://developers.cloudflare.com/pages/get-started/direct-upload/)，直传项目不能原地切换 Git 集成，因此新建 Git 关联项目并绑定域名。
 
 ```bash
-npm run build
-# 使用环境变量配置 CLOUDFLARE_API_TOKEN 和 CLOUDFLARE_ACCOUNT_ID
-npx wrangler@4 pages deploy dist --project-name=songscope --branch=main
+git push origin main  # 自动触发 Pages 部署
 ```
 
-参考 [Cloudflare Direct Upload 文档](https://developers.cloudflare.com/pages/get-started/direct-upload/)。不要把 API Token、`.env`、本地配置或隧道凭据提交进仓库。
+## 署名
+
+Github@Yukinsnow · Bilibili@純白
+
+应用首页及工程界面底部均显示署名。GitHub 链接指向已确认的账户；未猜测 Bilibili 个人空间链接。
 
 ## 项目结构
 
@@ -98,6 +124,8 @@ npx wrangler@4 pages deploy dist --project-name=songscope --branch=main
 | `src/App.tsx` | 歌曲首页、只读编排、通道联动与导出交互 |
 | `src/lib/song.ts` | 工程 ZIP、XML、元信息及插件路由解析 |
 | `src/lib/musicx.ts` | `.musicx` 音符二进制编解码 |
+| `src/lib/timing.ts` | 全速度 / 拍号图、小节位置和导出归零 |
+| `src/lib/presets.ts` | 插件状态的预设名与音色文件引用 |
 | `src/lib/midi.ts` | 标准 MIDI 导出及早期格式研究辅助函数 |
 | `electron/` | 桌面窗口与文件读写桥接 |
 | `public/` | PWA、现用图标、简约图标候选及预览页 |
@@ -106,6 +134,15 @@ npx wrangler@4 pages deploy dist --project-name=songscope --branch=main
 | `fixtures/smoke.song` | 合成测试工程，不含真实用户歌曲 |
 
 ## 验证与格式说明
+
+```bash
+npm run build
+xvfb-run -a npx electron --no-sandbox scripts/test-timing-shortcuts.cjs
+xvfb-run -a npx electron --no-sandbox scripts/test-presets.cjs
+```
+
+合成回归覆盖 120→80→150→100 BPM、4/4→3/4→7/8→5/4、单片段归零、MIDI 元事件重读、F1/F2/F3、输入框与连发保护，以及 Serum/Kontakt/通用预设元数据、UTF-16 引用、损坏和未知状态。CI 在 Linux 构建前运行这些验证。
+
 
 在获得授权的本地真实工程上验证了：44 条非文件夹轨道、70 个 MIDI 块；全部导出后重读为 5927 个音符。测试歌曲不随项目或网页分发。
 
@@ -124,7 +161,7 @@ SONG=/path/to/example.song xvfb-run -a node_modules/.bin/electron --no-sandbox s
 
 保留 10 款不同风格的 AI 品牌概念图作为设计记录：手写音乐、瑞士极简、建筑字母、包豪斯、工业录音棚、复古合成器、丝带、负空间、唱片厂牌与模块音序。采用电蓝 / 深蓝黑 / 白色配色。
 
-- [在线放大对比](https://songscope.pages.dev/brand/round-3/)
+- [在线放大对比](https://songscope.response.run/brand/round-3/)
 - 原图：`public/brand/round-3/01.png` 至 `10.png`
 - [完整提示词](docs/branding/round-3/prompts.md)，使用内置 imagegen 生成
 - 对比图：`shots/logo-round3-sheet.png`

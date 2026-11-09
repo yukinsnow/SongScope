@@ -12,7 +12,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            target: --linux AppImage --x64
+            target: --linux AppImage --x64 --arm64
           - os: windows-latest
             target: --win zip --x64
           - os: macos-latest
@@ -26,6 +26,11 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      - name: Timing, shortcuts and preset regression checks
+        if: runner.os == 'Linux'
+        run: |
+          xvfb-run -a npx electron --no-sandbox scripts/test-timing-shortcuts.cjs
+          xvfb-run -a npx electron --no-sandbox scripts/test-presets.cjs
       - name: Package
         run: npx electron-builder ${{ matrix.target }} --publish never
         env:

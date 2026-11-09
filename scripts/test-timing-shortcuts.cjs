@@ -1,0 +1,34 @@
+const {app,BrowserWindow}=require('electron');const path=require('path'),fs=require('fs'),assert=require('assert/strict');const esbuild=require('esbuild');
+app.disableHardwareAcceleration();
+app.whenReady().then(async()=>{try{
+ const win=new BrowserWindow({width:1280,height:960,show:false,webPreferences:{backgroundThrottling:false}});
+ await win.loadFile(path.join(__dirname,'../dist/index.html'));
+ const bundle=esbuild.buildSync({stdin:{contents:`export {readSong} from './src/lib/song';export {exportPartsToMidi} from './src/lib/midi';export {buildBars,formatPosition} from './src/lib/timing';export {encodeMusicx} from './src/lib/musicx';export {Midi} from '@tonejs/midi';export {default as JSZip} from 'jszip';`,resolveDir:path.join(__dirname,'..')},bundle:true,write:false,format:'iife',globalName:'TimingTest',platform:'browser'}).outputFiles[0].text;
+ await win.webContents.executeJavaScript(bundle);
+ const timing=await win.webContents.executeJavaScript(`(async()=>{
+ const k=TimingTest,z=new k.JSZip();
+ const xml='<Song xmlns:x="x" name="Timing Test"><Attributes x:id="Root"><Attributes x:id="timeContext"><TempoMap>'+[[0,.5],[8,.75],[14,.4],[24,.6]].map(([b,t])=>'<TempoMapSegment curveType="0" start="'+b+'" tempo="'+t+'"/>').join('')+'</TempoMap><TimeSignatureMap>'+[[0,4,4],[8,3,4],[14,7,8],[21,5,4]].map(([b,n,d])=>'<TimeSignatureMapSegment start="'+b+'" numerator="'+n+'" denominator="'+d+'"/>').join('')+'</TimeSignatureMap></Attributes><List x:id="Tracks"><MediaTrack name="Piano" mediaType="Music" trackID="piano"><List x:id="Events"><MusicPart clipID="clip" name="Variable Song" start="0" length="32"/></List></MediaTrack></List></Attributes></Song>';
+ z.file('Song/song.xml',xml);z.file('Song/mediapool.xml','<MediaPool xmlns:x="x"><MusicClip mediaID="clip"><Url x:id="dataPath" url="media:///Performances/test.musicx"/></MusicClip></MediaPool>');
+ z.file('Performances/test.musicx',k.encodeMusicx([0,9,15,25].map(start=>({start,pitch:60+start%12,length:.5,velocity:90}))));
+ const bytes=await z.generateAsync({type:'uint8array'}),s=await k.readSong('timing.song',bytes.buffer),track=s.tracks[0],part=track.parts[0];
+ const options={tempoMap:s.tempoMap,meterMap:s.meterMap,arrange:true};
+ const m=new k.Midi(k.exportPartsToMidi([{track,part}],options));
+ const clip={...part,start:10,length:10,notes:[{start:0,pitch:60,length:1,velocity:90}]};
+ const single=new k.Midi(k.exportPartsToMidi([{track,part:clip}],{...options,arrange:false}));
+ z.file('Song/song.xml',xml.replace('curveType="0" start="24"','curveType="1" start="24"'));
+ const curve=await k.readSong('curve.song',await z.generateAsync({type:'arraybuffer'}));
+ const dt=new DataTransfer();dt.items.add(new File([bytes],'timing.song'));document.querySelector('.landing').dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:dt}));
+ for(let i=0;i<80&&!document.querySelector('.app');i++)await new Promise(r=>setTimeout(r,50));
+ return {tempos:s.tempoMap.map(e=>[e.beat,e.bpm]),meters:s.meterMap,bars:k.buildBars(s.meterMap,32).slice(0,9).map(b=>[b.beat,b.number]),midiTempos:m.header.tempos.map(e=>[e.ticks,e.bpm]),midiMeters:m.header.timeSignatures.map(e=>[e.ticks,e.timeSignature]),secondsAt9:m.header.ticksToSeconds(9*m.header.ppq),singleTempo:single.header.tempos.map(e=>[e.ticks,e.bpm]),singleMeters:single.header.timeSignatures.map(e=>[e.ticks,e.timeSignature]),curveWarn:curve.warnings.some(w=>w.includes('曲线变速')),loaded:!!document.querySelector('.app')};
+ })()`);
+ assert.equal(timing.loaded,true);assert.deepEqual(timing.tempos,[[0,120],[8,80],[14,150],[24,100]]);
+ assert.deepEqual(timing.bars,[[0,1],[4,2],[8,3],[11,4],[14,5],[17.5,6],[21,7],[26,8],[31,9]]);
+ assert.deepEqual(timing.midiTempos,[[0,120],[3840,80],[6720,150],[11520,100]]);
+ assert.deepEqual(timing.midiMeters,[[0,[4,4]],[3840,[3,4]],[6720,[7,8]],[10080,[5,4]]]);
+ assert.equal(timing.secondsAt9,4.75);assert.deepEqual(timing.singleTempo,[[0,80],[1920,150]]);assert.deepEqual(timing.singleMeters,[[0,[3,4]],[1920,[7,8]]]);assert.equal(timing.curveWarn,true);
+ const keyboard=await win.webContents.executeJavaScript(`(async()=>{const sleep=()=>new Promise(r=>setTimeout(r,80));const key=(name,target=window,extra={})=>target.dispatchEvent(new KeyboardEvent('keydown',{key:name,bubbles:true,cancelable:true,...extra}));key('F1');await sleep();const help=!!document.querySelector('dialog[open]');key('F1');await sleep();const helpClosed=!document.querySelector('dialog');key('F2');await sleep();const editor=!!document.querySelector('.midiInspector');key('F3');await sleep();const mixer=!!document.querySelector('.mixer');key('F3',window,{repeat:true});await sleep();const repeatIgnored=!!document.querySelector('.mixer');const input=document.createElement('input');document.body.append(input);input.focus();const inputAllowed=key('F3',input);await sleep();const inputIgnored=!!document.querySelector('.mixer');input.remove();key('F3');key('F2');await sleep();const closed=!document.querySelector('.mixer')&&!document.querySelector('.midiInspector');return {help,helpClosed,editor,mixer,repeatIgnored,inputIgnored,inputAllowed,closed,credits:document.querySelector('.credits').textContent};})()`);
+ for(const key of ['help','helpClosed','editor','mixer','repeatIgnored','inputIgnored','inputAllowed','closed'])assert.equal(keyboard[key],true,key);
+ assert.match(keyboard.credits,/Github@Yukinsnow/);assert.match(keyboard.credits,/Bilibili@純白/);
+ fs.writeFileSync(path.join(__dirname,'../shots/variable-timing.png'),(await win.capturePage()).toPNG());
+ console.log(JSON.stringify({timing,keyboard},null,2));app.quit();
+ }catch(e){console.error(e.stack||e);app.exit(1);}});

@@ -4,6 +4,8 @@ import {
   attr, byXid, child, childByXid, children, descendants, firstByXid, kids,
   parseXml, s1Color, xid,
 } from "./xml";
+import { extractPresetNames } from "./presets";
+import { readTimeMaps } from "./timing";
 import { decodeMusicx } from "./musicx";
 
 const XML_ENTRIES = [
@@ -64,7 +66,10 @@ export async function readSong(fileName: string, data: ArrayBuffer): Promise<S1S
       }
     }
   }
-  const { tempo, timeSignature } = readTempo(songDoc);
+  const initial = readTempo(songDoc);
+  const {tempoMap,meterMap}=readTimeMaps(songDoc,initial.tempo,initial.timeSignature);
+  const tempo=tempoMap[0].bpm, timeSignature=meterMap[0].numerator+"/"+meterMap[0].denominator;
+  if(tempoMap.some(e=>e.curveType!==0))warnings.push("检测到曲线变速：已保留原始节点与曲线类型；当前 MIDI 导出按节点阶梯近似，尚未还原连续曲线。");
   const mediaPool = readMediaPool(xmlDocs["Song/mediapool.xml"]);
 
   // ---------- tracks ----------
@@ -111,6 +116,19 @@ export async function readSong(fileName: string, data: ArrayBuffer): Promise<S1S
 
   // ---------- plugin model ----------
   const instruments = readInstruments(xmlDocs["Devices/audiosynthfolder.xml"]);
+  for(const entry of instruments){
+    const p=entry.plugin,path=p.presetPath;
+    p.presetNames=[];p.presetSource=null;
+    if(!path){p.presetNote="工程未保存插件状态路径";continue;}
+    const file=findZipEntry(zip,path.replace(/^media:\/+/,''));
+    if(!file){p.presetNote="工程中缺少对应插件状态文件";continue;}
+    const size=(file as unknown as {_data?:{uncompressedSize?:number}})._data?.uncompressedSize;
+    if(size&&size>32*1024*1024){p.presetNote="插件状态超过 32MB，未提取预设";continue;}
+    try{
+      const result=extractPresetNames(await file.async("uint8array"),p.name);
+      p.presetNames=result.names;p.preset=result.names[0]??null;p.presetSource=result.source;p.presetNote=result.note;
+    }catch{p.presetNote="无法读取插件状态文件";}
+  }
   const channelEffects = readChannelEffects(xmlDocs["Devices/audiomixer.xml"]);
   const channels = readMusicChannels(xmlDocs["Devices/musictrackdevice.xml"]);
 
@@ -181,6 +199,7 @@ export async function readSong(fileName: string, data: ArrayBuffer): Promise<S1S
     plugins,
     tempo,
     timeSignature,
+    tempoMap, meterMap,
     songTitle: metadata["Document:Title"] || songTitle,
     metadata, artwork,
     mediaPool,
@@ -332,7 +351,8 @@ function readInstruments(doc: Document | undefined): InstrumentEntry[] {
         subCategory: ci.subCategory,
         native: ci.native,
         format: "instrument",
-        preset: attr(preset, "text") ?? null,
+        preset: null,
+        presetPath: attr(preset, "text") ?? null,
       },
     });
   }

@@ -1,5 +1,6 @@
 import { Midi } from "@tonejs/midi";
-import type { NoteEvent, S1Part, S1Song, S1Track } from "./types";
+import type { NoteEvent, S1Part, S1Song, S1Track, TempoChange, MeterChange } from "./types";
+import { rebaseTimeMaps } from "./timing";
 import { encodeMusicx } from "./musicx";
 import { attr, newGuid, xid, kids, child } from "./xml";
 
@@ -16,6 +17,8 @@ export interface ExportOptions {
   /** shift notes by the arrangement position of the part instead of exporting clip content at 0 */
   arrange?: boolean;
   tempo?: number | null;
+  tempoMap?: TempoChange[];
+  meterMap?: MeterChange[];
 }
 
 export function partNotes(part: S1Part): NoteEvent[] {
@@ -35,7 +38,15 @@ export function partRelativeNotes(part: S1Part): NoteEvent[] {
 export function exportPartsToMidi(refs: PartRef[], opts: ExportOptions = {}): Uint8Array {
   const midi = new Midi();
   const ppq = midi.header.ppq || DEFAULT_PPQ;
-  midi.header.setTempo(opts.tempo && opts.tempo >= 20 && opts.tempo <= 400 ? opts.tempo : 120);
+  // Independent clips from different song positions cannot share conflicting conductor maps.
+  if(!opts.arrange && refs.length>1 && (opts.tempoMap?.length||0)+(opts.meterMap?.length||0)>2)
+    throw new Error("变速/变拍子的多片段请保留编排位置导出");
+  const origin=opts.arrange?0:(refs[0]?.part.start??0);
+  const end=Math.max(origin,...refs.map(r=>(r.part.start??0)+(r.part.length??0)));
+  const maps=rebaseTimeMaps(opts.tempoMap??[{beat:0,bpm:opts.tempo||120,curveType:0,raw:{}}],opts.meterMap??[{beat:0,numerator:4,denominator:4}],origin,end);
+  midi.header.tempos=maps.tempoMap.map(e=>({ticks:Math.round(e.beat*ppq),bpm:e.bpm}));
+  midi.header.timeSignatures=maps.meterMap.map(e=>({ticks:Math.round(e.beat*ppq),timeSignature:[e.numerator,e.denominator]}));
+  midi.header.update();
 
   const merged = opts.merge ? midi.addTrack() : null;
   if (merged) merged.name = "S1 Parts";

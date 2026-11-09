@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog, ipcMain } = require("electron");
+const { app, BrowserWindow, dialog, ipcMain, shell } = require("electron");
 const path = require("path");
 const fs = require("fs");
 
@@ -17,6 +17,11 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
     },
+  });
+
+  win.webContents.setWindowOpenHandler(({url})=>{
+    if(url.startsWith('https://github.com/'))shell.openExternal(url);
+    return {action:'deny'};
   });
 
   if (process.env.VITE_DEV_SERVER_URL) {

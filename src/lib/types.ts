@@ -51,7 +51,14 @@ export interface PluginRef {
   native?: boolean;
   format?: "instrument" | "effect" | "unknown";
   preset?: string | null;
+  presetPath?: string | null;
+  presetNames?: string[];
+  presetSource?: string | null;
+  presetNote?: string;
 }
+
+export interface TempoChange { beat: number; bpm: number; curveType: number; raw: Record<string,string> }
+export interface MeterChange { beat: number; numerator: number; denominator: number }
 
 export interface S1Song {
   fileName: string;
@@ -60,6 +67,8 @@ export interface S1Song {
   folders: S1Track[];
   plugins: PluginRef[];
   tempo: number | null;
+  tempoMap: TempoChange[];
+  meterMap: MeterChange[];
   timeSignature: string | null;
   /** mediaID -> media:/// path from mediapool.xml */
   mediaPool: Map<string, string>;

@@ -1,4 +1,4 @@
-const CACHE = "songscope-v033";
+const CACHE = "songscope-v040";
 const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png", "./brand/songscope-logo.png"];
 
 self.addEventListener("install", (e) => {
@@ -20,7 +20,7 @@ self.addEventListener("fetch", (e) => {
     e.respondWith(
       fetch(req).then((res) => {
         const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(new URL(req.url).pathname.endsWith("/") || new URL(req.url).pathname.endsWith("/index.html") ? "./index.html" : req, copy)).catch(() => {});
+        caches.open(CACHE).then((c) => c.put(new URL(req.url).pathname === "/" || new URL(req.url).pathname === "/index.html" ? "./index.html" : req, copy)).catch(() => {});
         return res;
       }).catch(() => caches.match(req).then(hit => hit || (new URL(req.url).pathname === "/" ? caches.match("./index.html") : Response.error())))
     );
