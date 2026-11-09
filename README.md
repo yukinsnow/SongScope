@@ -29,6 +29,24 @@ npm run dist:mac     # dmg（需在 macOS）
 
 跨平台 CI 见 `.github/workflows/build.yml`。
 
+本机（Linux arm64）实测产物：
+
+- `release/S1 Toolbox-0.1.0.AppImage`（x64）
+- `release/S1 Toolbox-0.1.0-arm64.AppImage`（arm64）
+- `release/S1 Toolbox-0.1.0-win.zip`（Windows x64 免安装版）
+
+在无网络的构建机上补 Electron 二进制镜像：
+
+```bash
+ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ \
+ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-builder-binaries/ \
+npx electron-builder --linux AppImage --x64
+```
+
+> Linux arm64 主机无法生成 NSIS 安装包（makensis 只有 x64 二进制）；
+> Windows 用 `--win zip` 出免安装版，安装包交给 CI 的 windows-latest。
+> macOS dmg 必须在 macOS 上构建。
+
 ## .song 格式速记
 
 `.song` 本质是一个 ZIP：

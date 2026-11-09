@@ -151,6 +151,15 @@ export default function App() {
       });
       const saved = await saveFile(res.fileName, res.bytes);
       setToast("已写入 " + res.noteCount + " 个音符" + (saved ? " → " + saved : "") + (res.warnings.length ? "；" + res.warnings[0] : ""));
+      // Re-parse the edited archive so the new part shows up immediately.
+      try {
+        const bytes = res.bytes as Uint8Array;
+        const reloaded = await readSong(res.fileName, bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer);
+        setSong(reloaded);
+        setPickedPartIds(new Set());
+        setSelectedId(importTrackId);
+        setImportTrackId(importTrackId);
+      } catch { /* keep old view; file already saved */ }
     } catch (e) {
       setError((e as Error).message);
     } finally {
