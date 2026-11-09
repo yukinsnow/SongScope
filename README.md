@@ -120,7 +120,9 @@ SONG=/path/to/example.song xvfb-run -a node_modules/.bin/electron --no-sandbox s
 
 ## 图标待选
 
-现用图标尚未替换。A「轨迹」、B「字标」、C「取景」、D「声形」四个简约方向见 `public/brand/candidates/`；`icons.html` 的预选仅存于本机，不会自动更换应用图标。
+现用图标尚未替换。最新候选 E「原结构」、F「整齐版」、G「圆润版」保留内部走带线与三色 MIDI 块，去掉镜片圆环、反光及同心线。见 `public/brand/candidates/` 和网页版 `icons.html`。
+
+候选页的预选只存于本机，不会自动更换应用图标。此前 A/B/C/D 的 SVG 仍保留作设计记录。运行 `python3 scripts/make-icon-options.py` 可重建当前三个候选及预览页。
 
 ---
 
