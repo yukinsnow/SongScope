@@ -1,3 +1,4 @@
+import { t as tr } from "../i18n";
 import JSZip from "jszip";
 import type { PluginRef, S1Part, S1Song, S1Track, TrackType } from "./types";
 import {
@@ -43,7 +44,7 @@ export async function readSong(fileName: string, data: ArrayBuffer): Promise<S1S
 
   const songDoc = xmlDocs["Song/song.xml"];
   if (!songDoc) {
-    throw new Error("这不是有效的 .song：压缩包内找不到 Song/song.xml（文件可能是旧版二进制格式）");
+    throw new Error(tr("这不是有效的 .song：压缩包内找不到 Song/song.xml（文件可能是旧版二进制格式）"));
   }
 
   const metadata: Record<string, string> = {};
@@ -69,7 +70,7 @@ export async function readSong(fileName: string, data: ArrayBuffer): Promise<S1S
   const initial = readTempo(songDoc);
   const {tempoMap,meterMap}=readTimeMaps(songDoc,initial.tempo,initial.timeSignature);
   const tempo=tempoMap[0].bpm, timeSignature=meterMap[0].numerator+"/"+meterMap[0].denominator;
-  if(tempoMap.some(e=>e.curveType!==0))warnings.push("检测到曲线变速：已保留原始节点与曲线类型；当前 MIDI 导出按节点阶梯近似，尚未还原连续曲线。");
+  if(tempoMap.some(e=>e.curveType!==0))warnings.push(tr("检测到曲线变速：已保留原始节点与曲线类型；当前 MIDI 导出按节点阶梯近似，尚未还原连续曲线。"));
   const mediaPool = readMediaPool(xmlDocs["Song/mediapool.xml"]);
 
   // ---------- tracks ----------
@@ -88,7 +89,23 @@ export async function readSong(fileName: string, data: ArrayBuffer): Promise<S1S
     for (const el of Array.from(songDoc.getElementsByTagName("*"))) {
       if (/^(MediaTrack|FolderTrack|AutomationTrack)$/.test(el.tagName)) tracks.push(readTrack(el));
     }
-    warnings.push("未找到 List[x:id=Tracks]，已回退到全文档扫描。");
+    warnings.push(tr("未找到 List[x:id=Tracks]，已回退到全文档扫描。"));
+  }
+
+  // Resolve saved references only. Never read, fetch, decode or export audio files.
+  for (const track of tracks) {
+    const seen = new Set<string>();
+    for (const event of descendants(track.element, "AudioEvent")) {
+      const clipId = attr(event, "clipID");
+      const path = (clipId && mediaPool.get(clipId)) || attr(event, "path", "url");
+      const eventName = attr(event, "name") || "";
+      let decoded = path || "";
+      try { decoded = decodeURIComponent(decoded); } catch { /* preserve malformed URI */ }
+      const name = decoded.split(/[\\/]/).pop() || eventName;
+      const key = JSON.stringify([clipId,path,eventName]);
+      if (!seen.has(key)) track.audioFiles.push({clipId,eventName,name,path});
+      seen.add(key);
+    }
   }
 
   // ---------- MIDI content (.musicx) ----------
@@ -101,7 +118,7 @@ export async function readSong(fileName: string, data: ArrayBuffer): Promise<S1S
       p.mediaPath = path;
       const entry = findZipEntry(zip, path);
       if (!entry) {
-        warnings.push("缺少 MIDI 数据文件: " + path);
+        warnings.push(tr("缺少 MIDI 数据文件: ") + path);
         continue;
       }
       try {
@@ -119,15 +136,15 @@ export async function readSong(fileName: string, data: ArrayBuffer): Promise<S1S
   for(const entry of instruments){
     const p=entry.plugin,path=p.presetPath;
     p.presetNames=[];p.presetSource=null;
-    if(!path){p.presetNote="工程未保存插件状态路径";continue;}
+    if(!path){p.presetNote=tr("工程未保存插件状态路径");continue;}
     const file=findZipEntry(zip,path.replace(/^media:\/+/,''));
-    if(!file){p.presetNote="工程中缺少对应插件状态文件";continue;}
+    if(!file){p.presetNote=tr("工程中缺少对应插件状态文件");continue;}
     const size=(file as unknown as {_data?:{uncompressedSize?:number}})._data?.uncompressedSize;
-    if(size&&size>32*1024*1024){p.presetNote="插件状态超过 32MB，未提取预设";continue;}
+    if(size&&size>32*1024*1024){p.presetNote=tr("插件状态超过 32MB，未提取预设");continue;}
     try{
       const result=extractPresetNames(await file.async("uint8array"),p.name);
       p.presetNames=result.names;p.preset=result.names[0]??null;p.presetSource=result.source;p.presetNote=result.note;
-    }catch{p.presetNote="无法读取插件状态文件";}
+    }catch{p.presetNote=tr("无法读取插件状态文件");}
   }
   const channelEffects = readChannelEffects(xmlDocs["Devices/audiomixer.xml"]);
   const channels = readMusicChannels(xmlDocs["Devices/musictrackdevice.xml"]);
@@ -188,7 +205,7 @@ export async function readSong(fileName: string, data: ArrayBuffer): Promise<S1S
     ...extras,
   ]);
   if (!plugins.length) {
-    warnings.push("没有解析到任何插件；工程可能为空，或使用了未知的设备结构。");
+    warnings.push(tr("没有解析到任何插件；工程可能为空，或使用了未知的设备结构。"));
   }
 
   return {
@@ -263,6 +280,7 @@ function readTrack(el: Element): S1Track {
     parentFolderId: attr(el, "parentFolder") ?? null,
     element: el,
     parts,
+    audioFiles: [],
     instrument: null,
     plugins: [],
     inserts: [], sends: [],
@@ -404,7 +422,7 @@ function readChannelEffects(doc: Document | undefined): Map<string, PluginRef[]>
         const targetChannel = all.find(n => /Channel$/.test(n.tagName) && kids(n).some(u => u.tagName === "UID" && xid(u) === "uniqueID" && attr(u,"uid") === target));
         const targetInserts = targetChannel ? kids(targetChannel).find(n => xid(n) === "Inserts") : undefined;
         const targetFx = targetInserts ? readFxSlots(targetInserts) : [];
-        const label = attr(connection,"friendlyName") || (targetChannel && attr(targetChannel,"label")) || "未识别发送目标";
+        const label = attr(connection,"friendlyName") || (targetChannel && attr(targetChannel,"label")) || tr("未识别发送目标");
         fx.push(...(targetFx.length ? targetFx.map(p => ({...p, name: label + " → " + p.name, category: "Sends"})) : [{name: label, format: "effect" as const, category: "Sends"}]));
       }
     }
@@ -458,7 +476,7 @@ function readFxSlots(inserts: Element): PluginRef[] {
 function readMediaPool(doc: Document | undefined): Map<string, string> {
   const map = new Map<string, string>();
   if (!doc) return map;
-  for (const clip of Array.from(doc.getElementsByTagName("MusicClip"))) {
+  for (const clip of [...Array.from(doc.getElementsByTagName("MusicClip")), ...Array.from(doc.getElementsByTagName("AudioClip"))]) {
     const id = attr(clip, "mediaID", "clipID", "id");
     if (!id) continue;
     const urlEl = kids(clip).find((k) => k.tagName === "Url" && xid(k) === "dataPath")

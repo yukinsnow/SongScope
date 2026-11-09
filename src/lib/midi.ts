@@ -1,3 +1,4 @@
+import { t as tr } from "../i18n";
 import { Midi } from "@tonejs/midi";
 import type { NoteEvent, S1Part, S1Song, S1Track, TempoChange, MeterChange } from "./types";
 import { rebaseTimeMaps } from "./timing";
@@ -40,7 +41,7 @@ export function exportPartsToMidi(refs: PartRef[], opts: ExportOptions = {}): Ui
   const ppq = midi.header.ppq || DEFAULT_PPQ;
   // Independent clips from different song positions cannot share conflicting conductor maps.
   if(!opts.arrange && refs.length>1 && (opts.tempoMap?.length||0)+(opts.meterMap?.length||0)>2)
-    throw new Error("变速/变拍子的多片段请保留编排位置导出");
+    throw new Error(tr("变速/变拍子的多片段请保留编排位置导出"));
   const origin=opts.arrange?0:(refs[0]?.part.start??0);
   const end=Math.max(origin,...refs.map(r=>(r.part.start??0)+(r.part.length??0)));
   const maps=rebaseTimeMaps(opts.tempoMap??[{beat:0,bpm:opts.tempo||120,curveType:0,raw:{}}],opts.meterMap??[{beat:0,numerator:4,denominator:4}],origin,end);
@@ -111,13 +112,13 @@ export async function importMidiInto(
 ): Promise<ImportResult> {
   const warnings: string[] = [];
   const { notes, name, ppq } = midiNotesFromBytes(midiBytes);
-  if (!notes.length) throw new Error("这个 MIDI 文件里没有音符。");
+  if (!notes.length) throw new Error(tr("这个 MIDI 文件里没有音符。"));
 
   const track = song.tracks.find((t) => t.id === opts.targetTrackId);
-  if (!track) throw new Error("找不到目标轨道。");
+  if (!track) throw new Error(tr("找不到目标轨道。"));
 
   const songDoc = song.xmlDocs["Song/song.xml"];
-  if (!songDoc) throw new Error("song.xml 未加载。");
+  if (!songDoc) throw new Error(tr("song.xml 未加载。"));
   const poolDoc = song.xmlDocs["Song/mediapool.xml"];
 
   const scale = 1 / ppq; // ticks -> beats
@@ -151,7 +152,7 @@ export async function importMidiInto(
     folder.appendChild(clip);
     writeXml(song, "Song/mediapool.xml", poolDoc);
   } else {
-    warnings.push("工程里没有 mediapool.xml，未注册 MediaPool 条目。");
+    warnings.push(tr("工程里没有 mediapool.xml，未注册 MediaPool 条目。"));
   }
 
   // 3) new MusicPart on the target track

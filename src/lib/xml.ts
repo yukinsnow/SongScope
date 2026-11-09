@@ -1,3 +1,4 @@
+import { t as tr } from "../i18n";
 export function parseXml(text: string): Document {
   let src = text;
   if (!/xmlns:x\s*=/.test(src.slice(0, 4000))) {
@@ -5,7 +6,7 @@ export function parseXml(text: string): Document {
   }
   const doc = new DOMParser().parseFromString(src, "application/xml");
   const err = doc.getElementsByTagName("parsererror")[0];
-  if (err) throw new Error("XML 解析失败: " + err.textContent?.slice(0, 300));
+  if (err) throw new Error(tr("XML 解析失败: ") + err.textContent?.slice(0, 300));
   return doc;
 }
 

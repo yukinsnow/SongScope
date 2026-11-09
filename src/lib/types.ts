@@ -36,6 +36,7 @@ export interface S1Track {
   parentFolderId: string | null;
   element: Element;
   parts: S1Part[];
+  audioFiles: { clipId: string | null; eventName: string; name: string; path: string | null }[];
   instrument: string | null;
   plugins: PluginRef[];
   inserts: PluginRef[];

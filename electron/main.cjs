@@ -4,7 +4,7 @@ const fs = require("fs");
 
 function createWindow() {
   const win = new BrowserWindow({
-    title: "SongScope — Studio One 工程查看器",
+    title: app.getLocale().toLowerCase().startsWith("zh") ? "SongScope — Studio One 工程查看器" : "SongScope — Studio One project viewer",
     icon: path.join(__dirname, "../dist/icon-512.png"),
     width: 1280,
     height: 840,
@@ -33,7 +33,7 @@ function createWindow() {
 
 ipcMain.handle("s1:open-song", async () => {
   const r = await dialog.showOpenDialog({
-    title: "打开 Studio One 工程",
+    title: app.getLocale().toLowerCase().startsWith("zh") ? "打开 Studio One 工程" : "Open Studio One project",
     filters: [{ name: "Studio One Song", extensions: ["song"] }],
     properties: ["openFile"],
   });

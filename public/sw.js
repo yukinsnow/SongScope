@@ -1,4 +1,4 @@
-const CACHE = "songscope-v040";
+const CACHE = "songscope-v041";
 const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png", "./brand/songscope-logo.png"];
 
 self.addEventListener("install", (e) => {

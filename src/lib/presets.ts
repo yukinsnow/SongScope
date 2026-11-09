@@ -1,3 +1,4 @@
+import { t as tr } from "../i18n";
 /** Read names from saved state only; never load plugins or resolve external sample paths. */
 export interface PresetDetails { names:string[]; source:string|null; note?:string }
 const MAX_STATE=32*1024*1024,MAX_TEXT=8*1024*1024;
@@ -9,18 +10,18 @@ function decodeEntities(s:string){
 }
 /** Validate the VST3 chunk table; do not scan broken containers as if they were raw states. */
 export function stateChunks(bytes:Uint8Array):Uint8Array[]{
-  if(bytes.length>MAX_STATE)throw Error('插件状态超过 32MB，未提取预设');
+  if(bytes.length>MAX_STATE)throw Error(tr("插件状态超过 32MB，未提取预设"));
   const ascii=(from:number,n:number)=>new TextDecoder().decode(bytes.subarray(from,from+n));
   if(ascii(0,4)!=='VST3')return [bytes];
-  if(bytes.length<48)throw Error('VST3 状态头不完整');
+  if(bytes.length<48)throw Error(tr("VST3 状态头不完整"));
   const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
   const offset=Number(view.getBigUint64(40,true));
-  if(!Number.isSafeInteger(offset)||offset<48||offset+8>bytes.length||ascii(offset,4)!=='List')throw Error('VST3 状态索引无效');
-  const count=view.getUint32(offset+4,true);if(count>256||offset+8+count*20>bytes.length)throw Error('VST3 状态索引越界');
+  if(!Number.isSafeInteger(offset)||offset<48||offset+8>bytes.length||ascii(offset,4)!=='List')throw Error(tr("VST3 状态索引无效"));
+  const count=view.getUint32(offset+4,true);if(count>256||offset+8+count*20>bytes.length)throw Error(tr("VST3 状态索引越界"));
   const out:Uint8Array[]=[];
   for(let i=0;i<count;i++){
     const pos=offset+8+i*20,id=ascii(pos,4),start=Number(view.getBigUint64(pos+4,true)),size=Number(view.getBigUint64(pos+12,true));
-    if(!Number.isSafeInteger(start)||!Number.isSafeInteger(size)||start<48||size<0||start+size>offset)throw Error('VST3 状态区块越界');
+    if(!Number.isSafeInteger(start)||!Number.isSafeInteger(size)||start<48||size<0||start+size>offset)throw Error(tr("VST3 状态区块越界"));
     if(['Comp','Cont','Info'].includes(id))out.push(bytes.subarray(start,start+size));
   }
   return out;
@@ -57,8 +58,8 @@ export function extractPresetNames(bytes:Uint8Array,pluginName:string):PresetDet
     }
     const explicit=unique(names);
     const files=unique(refs);
-    if(explicit.length)return {names:unique([...explicit,...files]),source:files.length?'插件预设元数据 / Kontakt 文件引用':'插件状态中的预设元数据',note:files.length?'含保存状态中的音色/快照文件引用，未运行插件验证':undefined};
-    if(files.length)return {names:files,source:'Kontakt 音色文件引用',note:'读取到保存状态中的音色文件名；非运行中插件状态验证'};
-    return {names:[],source:null,note:'保存状态未暴露可识别名称（可能被压缩或使用私有格式）'};
+    if(explicit.length)return {names:unique([...explicit,...files]),source:files.length?tr("插件预设元数据 / Kontakt 文件引用"):tr("插件状态中的预设元数据"),note:files.length?tr("含保存状态中的音色/快照文件引用，未运行插件验证"):undefined};
+    if(files.length)return {names:files,source:tr("Kontakt 音色文件引用"),note:tr("读取到保存状态中的音色文件名；非运行中插件状态验证")};
+    return {names:[],source:null,note:tr("保存状态未暴露可识别名称（可能被压缩或使用私有格式）")};
   }catch(e){return {names:[],source:null,note:(e as Error).message};}
 }

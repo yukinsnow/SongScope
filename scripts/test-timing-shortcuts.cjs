@@ -19,7 +19,7 @@ app.whenReady().then(async()=>{try{
  const curve=await k.readSong('curve.song',await z.generateAsync({type:'arraybuffer'}));
  const dt=new DataTransfer();dt.items.add(new File([bytes],'timing.song'));document.querySelector('.landing').dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:dt}));
  for(let i=0;i<80&&!document.querySelector('.app');i++)await new Promise(r=>setTimeout(r,50));
- return {tempos:s.tempoMap.map(e=>[e.beat,e.bpm]),meters:s.meterMap,bars:k.buildBars(s.meterMap,32).slice(0,9).map(b=>[b.beat,b.number]),midiTempos:m.header.tempos.map(e=>[e.ticks,e.bpm]),midiMeters:m.header.timeSignatures.map(e=>[e.ticks,e.timeSignature]),secondsAt9:m.header.ticksToSeconds(9*m.header.ppq),singleTempo:single.header.tempos.map(e=>[e.ticks,e.bpm]),singleMeters:single.header.timeSignatures.map(e=>[e.ticks,e.timeSignature]),curveWarn:curve.warnings.some(w=>w.includes('曲线变速')),loaded:!!document.querySelector('.app')};
+ return {tempos:s.tempoMap.map(e=>[e.beat,e.bpm]),meters:s.meterMap,bars:k.buildBars(s.meterMap,32).slice(0,9).map(b=>[b.beat,b.number]),midiTempos:m.header.tempos.map(e=>[e.ticks,e.bpm]),midiMeters:m.header.timeSignatures.map(e=>[e.ticks,e.timeSignature]),secondsAt9:m.header.ticksToSeconds(9*m.header.ppq),singleTempo:single.header.tempos.map(e=>[e.ticks,e.bpm]),singleMeters:single.header.timeSignatures.map(e=>[e.ticks,e.timeSignature]),curveWarn:curve.warnings.some(w=>/曲线变速|Tempo curve/.test(w)),loaded:!!document.querySelector('.app')};
  })()`);
  assert.equal(timing.loaded,true);assert.deepEqual(timing.tempos,[[0,120],[8,80],[14,150],[24,100]]);
  assert.deepEqual(timing.bars,[[0,1],[4,2],[8,3],[11,4],[14,5],[17.5,6],[21,7],[26,8],[31,9]]);
