@@ -1,0 +1,69 @@
+{
+  "name": "s1-toolbox",
+  "productName": "S1 Toolbox",
+  "version": "0.1.0",
+  "description": "Studio One / Fender Studio Pro .song inspector with MIDI part export & import",
+  "main": "electron/main.cjs",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "start": "npm run build && electron .",
+    "dist:linux": "npm run build && electron-builder --linux AppImage deb",
+    "dist:win": "npm run build && electron-builder --win nsis",
+    "dist:mac": "npm run build && electron-builder --mac dmg"
+  },
+  "dependencies": {
+    "@tonejs/midi": "^2.0.28",
+    "jszip": "^3.10.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "typescript": "^5.7.2",
+    "vite": "^5.4.11"
+  },
+  "build": {
+    "appId": "com.xiaobing.s1toolbox",
+    "productName": "S1 Toolbox",
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "AudioVideo"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.music"
+    }
+  },
+  "author": {
+    "name": "Xiaobing",
+    "email": "xiaobing@example.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xiaobing/s1-toolbox.git"
+  }
+}
