@@ -1,8 +1,8 @@
 const {app,BrowserWindow}=require('electron');const path=require('path'),fs=require('fs'),assert=require('assert/strict');const esbuild=require('esbuild');
 app.disableHardwareAcceleration();
 app.whenReady().then(async()=>{try{
- const win=new BrowserWindow({width:1280,height:960,show:false,webPreferences:{backgroundThrottling:false}});
- await win.loadFile(path.join(__dirname,'../dist/index.html'));
+ const win=new BrowserWindow({width:1280,height:960,show:false,webPreferences:{backgroundThrottling:false,partition:'timing-'+Date.now()}});
+ if(process.env.WEB_URL)await win.loadURL(process.env.WEB_URL);else await win.loadFile(path.join(__dirname,'../dist/index.html'));
  const bundle=esbuild.buildSync({stdin:{contents:`export {readSong} from './src/lib/song';export {exportPartsToMidi} from './src/lib/midi';export {buildBars,formatPosition} from './src/lib/timing';export {encodeMusicx} from './src/lib/musicx';export {Midi} from '@tonejs/midi';export {default as JSZip} from 'jszip';`,resolveDir:path.join(__dirname,'..')},bundle:true,write:false,format:'iife',globalName:'TimingTest',platform:'browser'}).outputFiles[0].text;
  await win.webContents.executeJavaScript(bundle);
  const timing=await win.webContents.executeJavaScript(`(async()=>{
