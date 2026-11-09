@@ -1,8 +1,8 @@
-# 曲镜 · SongScope
+# SongScope — Studio One 工程查看器
 
 **打开 Studio One 工程，直观查看歌曲结构、轨道、插件与 MIDI。**
 
-曲镜是一个只读歌曲浏览器：不需要安装工程里的 VST 插件，也能查看工程结构、音符片段和插件名称。支持 Windows / macOS / Linux 桌面构建，以及手机与平板上的浏览器 / PWA。
+SongScope 是一个只读歌曲浏览器：不需要安装工程里的 VST 插件，也能查看工程结构、音符片段和插件名称。支持 Windows / macOS / Linux 桌面构建，以及手机与平板上的浏览器 / PWA。
 
 > 当前为私有预览项目。GitHub 仓库与 Release 保持私有。网页版可通过链接访问，工程文件仅在使用者本地解析，不会上传到服务器。
 
@@ -118,16 +118,18 @@ SONG=/path/to/example.song xvfb-run -a node_modules/.bin/electron --no-sandbox s
 
 格式笔记：`MusicPart` 保存 `clipID / start / length / offset`（拍）；`mediapool.xml` 中的 `MusicClip mediaID` 指向 `Performances/**/*.musicx`。VSTi 通过乐器输出通道关联，插入与发送保持槽位顺序。
 
-## Logo 待选
+## 品牌与 Logo
 
-现用图标尚未替换。最新一轮为 10 款不同风格的 AI 品牌概念图：手写音乐、瑞士极简、建筑字母、包豪斯、工业录音棚、复古合成器、丝带、负空间、唱片厂牌与模块音序。采用电蓝 / 深蓝黑 / 白色配色。
+已选定第 01 款「手写音乐」作为正式 Logo，主名为 **SongScope**，产品说明为 **Studio One 工程查看器**，不再使用中文品牌名。完整字标用于网页，音符与节奏线提取为平台应用图标。
+
+保留 10 款不同风格的 AI 品牌概念图作为设计记录：手写音乐、瑞士极简、建筑字母、包豪斯、工业录音棚、复古合成器、丝带、负空间、唱片厂牌与模块音序。采用电蓝 / 深蓝黑 / 白色配色。
 
 - [在线放大对比](https://songscope.pages.dev/brand/round-3/)
 - 原图：`public/brand/round-3/01.png` 至 `10.png`
 - [完整提示词](docs/branding/round-3/prompts.md)，使用内置 imagegen 生成
 - 对比图：`shots/logo-round3-sheet.png`
 
-当前均为概念预览，选定后再矢量化与小尺寸适配；不随此次探索改动正式应用图标。此前 E/F/G 去镜片方案仍保留于 `icons.html`，A/B/C/D 与 E/F/G 的 SVG 仍在 `public/brand/candidates/` 作记录。
+除选定的 01 款外，其余均为未采用的概念预览。此前 E/F/G 去镜片方案仍保留于 `icons.html`，A/B/C/D 与 E/F/G 的 SVG 仍在 `public/brand/candidates/` 作记录。
 
 ---
 

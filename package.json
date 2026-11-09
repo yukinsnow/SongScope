@@ -1,8 +1,8 @@
 {
   "name": "songscope",
   "productName": "SongScope",
-  "version": "0.3.1",
-  "description": "曲镜 SongScope — Studio One song explorer and read-only MIDI exporter",
+  "version": "0.3.2",
+  "description": "SongScope — Studio One project viewer and read-only MIDI exporter",
   "main": "electron/main.cjs",
   "private": true,
   "scripts": {
@@ -67,6 +67,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/xiaobing/s1-toolbox.git"
+    "url": "https://github.com/yukinsnow/SongScope.git"
   }
 }

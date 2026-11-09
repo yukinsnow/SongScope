@@ -1,6 +1,6 @@
 {
-  "name": "曲镜 · SongScope",
-  "short_name": "曲镜",
+  "name": "SongScope — Studio One 工程查看器",
+  "short_name": "SongScope",
   "description": "Studio One 歌曲结构浏览与 MIDI 导出",
   "start_url": "./",
   "display": "standalone",
@@ -17,12 +17,6 @@
       "src": "./icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "./icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
       "purpose": "any"
     }
   ]

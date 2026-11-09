@@ -4,7 +4,7 @@ const fs = require("fs");
 
 function createWindow() {
   const win = new BrowserWindow({
-    title: "曲镜 · SongScope",
+    title: "SongScope — Studio One 工程查看器",
     icon: path.join(__dirname, "../dist/icon-512.png"),
     width: 1280,
     height: 840,
