@@ -9,7 +9,7 @@
 - Build environment: `NODE_VERSION=22`, `ELECTRON_SKIP_BINARY_DOWNLOAD=1`
 - DNS: proxied `songscope.response.run` CNAME to `songscope-web.pages.dev`
 - The first deployment was seeded from the connected Git repository via the Pages deployment API; no dist/assets were uploaded from the host.
-- Main pushes are configured to trigger native repository builds. Verify a deployment's commit hash and trigger before declaring automatic synchronization proven.
+- Main pushes automatically trigger native repository builds. Verified deployment `dd3d4361-a7b2-4233-8a10-dbf2fde39efe`: trigger `github:push`, main commit `555bebf2f10bc257c8752a20b26140565b1465aa`, all clone/build/deploy stages succeeded.
 - Legacy direct-upload `songscope.pages.dev` is archival and is not the current production site. Do not upload a second copy of production there.
 
 ## Browser checks

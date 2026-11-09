@@ -1,7 +1,7 @@
 const {app,BrowserWindow}=require('electron');const path=require('path'),fs=require('fs'),assert=require('assert/strict');const esbuild=require('esbuild');
 app.disableHardwareAcceleration();
 app.whenReady().then(async()=>{try{
- const win=new BrowserWindow({width:1280,height:960,show:false,webPreferences:{backgroundThrottling:false,partition:'timing-'+Date.now()}});
+ const win=new BrowserWindow({width:1280,height:960,show:true,webPreferences:{backgroundThrottling:false,partition:'timing-'+Date.now()}});
  if(process.env.WEB_URL)await win.loadURL(process.env.WEB_URL);else await win.loadFile(path.join(__dirname,'../dist/index.html'));
  const bundle=esbuild.buildSync({stdin:{contents:`export {readSong} from './src/lib/song';export {exportPartsToMidi} from './src/lib/midi';export {buildBars,formatPosition} from './src/lib/timing';export {encodeMusicx} from './src/lib/musicx';export {Midi} from '@tonejs/midi';export {default as JSZip} from 'jszip';`,resolveDir:path.join(__dirname,'..')},bundle:true,write:false,format:'iife',globalName:'TimingTest',platform:'browser'}).outputFiles[0].text;
  await win.webContents.executeJavaScript(bundle);
@@ -29,6 +29,8 @@ app.whenReady().then(async()=>{try{
  const keyboard=await win.webContents.executeJavaScript(`(async()=>{const sleep=()=>new Promise(r=>setTimeout(r,80));const key=(name,target=window,extra={})=>target.dispatchEvent(new KeyboardEvent('keydown',{key:name,bubbles:true,cancelable:true,...extra}));key('F1');await sleep();const help=!!document.querySelector('dialog[open]');key('F1');await sleep();const helpClosed=!document.querySelector('dialog');key('F2');await sleep();const editor=!!document.querySelector('.midiInspector');key('F3');await sleep();const mixer=!!document.querySelector('.mixer');key('F3',window,{repeat:true});await sleep();const repeatIgnored=!!document.querySelector('.mixer');const input=document.createElement('input');document.body.append(input);input.focus();const inputAllowed=key('F3',input);await sleep();const inputIgnored=!!document.querySelector('.mixer');input.remove();key('F3');key('F2');await sleep();const closed=!document.querySelector('.mixer')&&!document.querySelector('.midiInspector');return {help,helpClosed,editor,mixer,repeatIgnored,inputIgnored,inputAllowed,closed,credits:document.querySelector('.credits').textContent};})()`);
  for(const key of ['help','helpClosed','editor','mixer','repeatIgnored','inputIgnored','inputAllowed','closed'])assert.equal(keyboard[key],true,key);
  assert.match(keyboard.credits,/Github@Yukinsnow/);assert.match(keyboard.credits,/Bilibili@純白/);
+ await win.webContents.executeJavaScript("Promise.all([...document.images].map(i=>i.decode().catch(()=>{})))");
+ await new Promise(r=>setTimeout(r,300));
  fs.writeFileSync(path.join(__dirname,'../shots/variable-timing.png'),(await win.capturePage()).toPNG());
  console.log(JSON.stringify({timing,keyboard},null,2));app.quit();
  }catch(e){console.error(e.stack||e);app.exit(1);}});
