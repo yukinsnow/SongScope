@@ -5,7 +5,7 @@ import {
   attr, byXid, child, childByXid, children, descendants, firstByXid, kids,
   parseXml, s1Color, xid,
 } from "./xml";
-import { extractPresetNames } from "./presets";
+import { extractSavedPreset } from "./preset-worker";
 import { readTimeMaps } from "./timing";
 import { decodeMusicx } from "./musicx";
 
@@ -142,8 +142,8 @@ export async function readSong(fileName: string, data: ArrayBuffer): Promise<S1S
     const size=(file as unknown as {_data?:{uncompressedSize?:number}})._data?.uncompressedSize;
     if(size&&size>32*1024*1024){p.presetNote=tr("插件状态超过 32MB，未提取预设");continue;}
     try{
-      const result=extractPresetNames(await file.async("uint8array"),p.name);
-      p.presetNames=result.names;p.preset=result.names[0]??null;p.presetSource=result.source;p.presetNote=result.note;
+      const result=await extractSavedPreset(await file.async("uint8array"),p.name);
+      p.presetNames=result.names;p.preset=result.names[0]??null;p.presetSource=result.source;p.presetNote=result.note;p.presetEncrypted=result.encrypted;
     }catch{p.presetNote=tr("无法读取插件状态文件");}
   }
   const channelEffects = readChannelEffects(xmlDocs["Devices/audiomixer.xml"]);
@@ -152,7 +152,12 @@ export async function readSong(fileName: string, data: ArrayBuffer): Promise<S1S
   for (const t of tracks) {
     const ch = channels.find((c) => c.uid && c.uid === t.channelId);
     let entry: InstrumentEntry | null = null;
-    if (ch?.instrumentOutObjectID) {
+    // MIDI destination is the synth instance ID even when its mixer channel
+    // has been renamed. Do not map every identical plugin name to instance 1.
+    if (ch?.destinationObjectID) {
+      entry = instruments.find(i => i.uniqueId === ch.destinationObjectID) ?? null;
+    }
+    if (!entry && ch?.instrumentOutObjectID) {
       entry = instruments.find((i) => i.uniqueId === ch.instrumentOutObjectID || i.channelIds.includes(ch.instrumentOutObjectID!)) ?? null;
     }
     if (!entry && ch?.instrumentOutName) {
@@ -389,6 +394,7 @@ interface MusicChannel {
   uid: string | null;
   instrumentOutName: string | null;
   instrumentOutObjectID: string | null;
+  destinationObjectID: string | null;
 }
 
 function readMusicChannels(doc: Document | undefined): MusicChannel[] {
@@ -396,10 +402,12 @@ function readMusicChannels(doc: Document | undefined): MusicChannel[] {
   return Array.from(doc.getElementsByTagName("MusicTrackChannel")).map((el) => {
     const uid = attr(kids(el).find((k) => k.tagName === "UID" && xid(k) === "uniqueID"), "uid");
     const out = kids(el).find((k) => k.tagName === "Connection" && xid(k) === "instrumentOut");
+    const destination = kids(el).find(k => k.tagName === "Connection" && xid(k) === "destination");
     return {
       uid,
       instrumentOutName: attr(out, "friendlyName"),
       instrumentOutObjectID: attr(out, "objectID")?.split("/")[0] ?? null,
+      destinationObjectID: attr(destination, "objectID")?.split("/")[0] ?? null,
     };
   });
 }

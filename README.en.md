@@ -86,3 +86,5 @@ Cloudflare Pages project `songscope-web` is connected directly to private reposi
 **Github@Yukinsnow · Bilibili@純白**
 
 SongScope uses selected handwritten-music logo 01. See [branding notes](docs/branding/selected.md) and [concept gallery](https://songscope.response.run/brand/round-3/). Other concepts are retained as design history, not active branding.
+
+Kontakt saved-state parsing and encrypted-state labels are supported without launching Kontakt.

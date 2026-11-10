@@ -1,6 +1,10 @@
 // UI strings only: never translate project content, plugin names or media paths.
 export const language = (navigator.languages?.[0] || navigator.language || 'en').toLowerCase().startsWith('zh') ? 'zh' : 'en';
 const english: Record<string,string> = {
+ "加密音源无法读取": "Encrypted instrument cannot be read",
+ "插件状态解析超时": "Plugin state parsing timed out",
+ "Kontakt 已保存音色名称": "Kontakt saved instrument name",
+ "读取工程保存的音色槽位名称，未运行插件验证": "Instrument slot names from saved state; not verified by running the plugin",
  "隐私与免责声明": "Privacy & disclaimer",
  "工程文件及其中的数据均在设备本地离线处理，不会以任何形式上传；不收集工程内容或素材路径。首次访问和更新网页时仅下载应用资源。": "Project files and their data are processed offline on your device and are never uploaded in any form. We do not collect project contents or media paths. Visiting or updating the website only downloads application assets.",
  "本工具为非官方只读查看器，与 PreSonus / Fender 无关联。解析结果可能存在误差，请以原软件为准，并保留工程备份。": "An unofficial read-only viewer, not affiliated with PreSonus / Fender. Parsing may be inaccurate; refer to the original software and keep project backups.",
@@ -126,5 +130,7 @@ const english: Record<string,string> = {
   "工程里没有 mediapool.xml，未注册 MediaPool 条目。": "Project has no mediapool.xml; MediaPool entry not registered."
 };
 export function t(text: string): string { return language === 'zh' ? text : (english[text] ?? text); }
-document.documentElement.lang = language === 'zh' ? 'zh-CN' : 'en';
-document.title = t('SongScope — Studio One 工程查看器');
+if (typeof document !== 'undefined') {
+ document.documentElement.lang = language === 'zh' ? 'zh-CN' : 'en';
+ document.title = t('SongScope — Studio One 工程查看器');
+}

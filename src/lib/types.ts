@@ -56,6 +56,8 @@ export interface PluginRef {
   presetNames?: string[];
   presetSource?: string | null;
   presetNote?: string;
+  /** Set only from a validated NI EncryptionItem, not from a failed decoder. */
+  presetEncrypted?: boolean;
 }
 
 export interface TempoChange { beat: number; bpm: number; curveType: number; raw: Record<string,string> }

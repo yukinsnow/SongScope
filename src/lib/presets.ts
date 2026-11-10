@@ -1,9 +1,18 @@
 import { t as tr } from "../i18n";
+import { readKontaktState, type KontaktState } from "./kontakt";
 /** Read names from saved state only; never load plugins or resolve external sample paths. */
-export interface PresetDetails { names:string[]; source:string|null; note?:string }
+export interface PresetDetails { names:string[]; source:string|null; note?:string; encrypted?:boolean }
 const MAX_STATE=32*1024*1024,MAX_TEXT=8*1024*1024;
 const clean=(s:string)=>s.trim().replace(/\0/g,'').slice(0,180);
 const unique=(names:string[])=>[...new Map(names.filter(n=>n&&!/[\u0000-\u001f\ufffd]/.test(n)).map(n=>[n.toLowerCase(),n])).values()].slice(0,64);
+export function kontaktPresetDetails(state: KontaktState): PresetDetails {
+  return {
+    names:state.names, encrypted:state.encrypted,
+    source:state.names.length?tr(state.source==='program'?"Kontakt 已保存音色名称":"Kontakt 音色文件引用"):null,
+    note:state.names.length?tr(state.source==='program'?"读取工程保存的音色槽位名称，未运行插件验证":"读取到保存状态中的音色文件名；非运行中插件状态验证"):
+      state.encrypted?tr("加密音源无法读取"):tr("保存状态未暴露可识别名称（可能被压缩或使用私有格式）"),
+  };
+}
 function decodeEntities(s:string){
   const doc=new DOMParser().parseFromString('<r>'+s+'</r>','application/xml');
   return doc.querySelector('parsererror')?s:(doc.documentElement.textContent||s);
@@ -29,6 +38,10 @@ export function stateChunks(bytes:Uint8Array):Uint8Array[]{
 export function extractPresetNames(bytes:Uint8Array,pluginName:string):PresetDetails{
   try{
     const chunks=stateChunks(bytes);const names:string[]=[],refs:string[]=[];
+    if (/kontakt/i.test(pluginName)) {
+      const state=readKontaktState(chunks);
+      if(state) return kontaktPresetDetails(state);
+    }
     if(new TextDecoder().decode(bytes.subarray(0,4))==='CcnK'&&bytes.length>=56){
       const magic=new TextDecoder().decode(bytes.subarray(8,12));
       if(['FxCk','FPCh'].includes(magic)){
