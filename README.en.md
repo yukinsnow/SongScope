@@ -19,13 +19,16 @@ The interface automatically uses Chinese when the system/browser's preferred lan
 ## Features
 
 - Song overview: artwork, title, artist, genre, creator, tempo, meter, key and producer application.
-- Read-only arrangement with MIDI note previews, zoom, scrolling and multi-selection.
+- Read-only arrangement with positioned MIDI and audio clips, zoom, scrolling and multi-selection.
+- Piano roll: labeled semitone keys, MIDI pitches (middle C = C4 / 60), bar/beat grid, note names and click-to-inspect pitch, duration, velocity and position. Independent zoom, scrolling and full 128-key range. Trimmed notes respect the part window.
 - Tempo and meter maps, change markers and bar lines that follow meter changes.
 - Bottom mixer: instrument, inserts, sends and recognizable target effects; selecting a track focuses its channel.
-- Saved preset names: Serum 2 metadata, VST2 program names, readable Kontakt preset/snapshot metadata and `.nki` / `.nkm` / `.nksn` references. File references are labeled; unknown or encrypted formats remain unrecognized. Kontakt has synthetic coverage but no equivalent real-user-project validation.
-- Audio tracks show saved source filenames, event names and paths in expandable **Audio sources** sections in the arrangement and mixer. Missing paths are explicitly labeled. References do not establish that the files still exist. **No audio export, playback, waveform rendering or external audio access.**
-- MIDI export: selected clips, a track or the arrangement. Single clips start at zero; multi-clip exports retain arrangement positions. Tempo and meter events are included. Continuous tempo curves currently use a clearly labeled step approximation.
+- Saved preset names: Serum 2 metadata, VST2 program names and supported Kontakt saved instrument slots (Guzheng/Cello verified on a real project). Validated empty Kontakt racks show **No instrument loaded**; validated encrypted states without a name show **Encrypted instrument cannot be read**. Unknown states remain unrecognized. Older file-reference extraction is labeled separately.
+- Audio clips show their saved position/duration and event name (or sample filename). Repeated samples stay separate, overlaps stack, click shows details and mixer **Audio sources** lists saved paths. Seconds-based positions/durations are converted independently using the tempo map; unknown units are not plotted, curved tempo uses a labeled step approximation. References do not establish file availability. **No audio export, playback, waveform rendering or external audio access.**
+- MIDI export: selected clips, the open piano-roll clip or the arrangement. Single clips start at zero; multi-clip exports retain arrangement positions. Tempo and meter events are included. Continuous tempo curves currently use a clearly labeled step approximation.
 - Mobile MIDI exports use system sharing when supported, otherwise download. Desktop exports use a save dialog. Audio sources are never added to MIDI export.
+
+Preset coverage and evidence: [support matrix](docs/preset-support.md). Vital, Sylenth1, Omnisphere, StylusRMX and Falcon have readers for limited explicit formats, not all versions or real-host variants. Ten real Nexus instances remain unreadable.
 
 ## Usage & shortcuts
 
@@ -40,6 +43,8 @@ The interface automatically uses Chinese when the system/browser's preferred lan
 | F2 | Toggle read-only MIDI inspector |
 | F3 | Toggle bottom mixer |
 | Esc | Close help |
+
+F2 and F3 are mutually exclusive; opening either closes the other. The plugin rack has no MIDI export button.
 
 Mac may require Fn. Text input, modifier combinations and key repeat do not trigger panel toggles. No project editing or MIDI import is exposed.
 

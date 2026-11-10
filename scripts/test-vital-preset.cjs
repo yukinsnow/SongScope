@@ -1,0 +1,26 @@
+const assert=require('node:assert/strict'),vm=require('node:vm'),esbuild=require('esbuild');
+const code=esbuild.buildSync({stdin:{contents:"export {extractVitalPreset} from './src/lib/vital-preset';",resolveDir:process.cwd()},bundle:true,write:false,format:'cjs',platform:'node'}).outputFiles[0].text;
+const moduleShim={exports:{}};
+vm.runInNewContext(code,{module:moduleShim,exports:moduleShim.exports,TextDecoder,navigator:{languages:['en-US']}});
+const {extractVitalPreset}=moduleShim.exports;
+const bytes=object=>Buffer.from(JSON.stringify(object)+'\0');
+const state={synth_version:'1.0.6',preset_name:'Lead · 雪',settings:{sample:{name:'NOT THE PRESET',preset_name:'Nested sample'},lfos:[{name:'LFO name'}],wavetables:[{name:'Wavetable'}]}};
+const result=extractVitalPreset([bytes(state)],'Vital');
+assert.deepEqual(JSON.parse(JSON.stringify(result.names)),['Lead · 雪']);
+assert.equal(result.source,'Vital JSON · preset_name');
+assert.equal(extractVitalPreset([bytes(state)],'Other Synth'),null);
+const privateState=Buffer.concat([bytes(state),Buffer.alloc(8),Buffer.from('JUCEPrivateData')]);
+assert.equal(extractVitalPreset([privateState],'Vital VST3').names[0],'Lead · 雪');
+function ccnk(magic,payload){const header=magic==='FBCh'?160:60;const data=Buffer.alloc(header+payload.length);data.write('CcnK');data.writeUInt32BE(data.length-8,4);data.write(magic,8);data.writeUInt32BE(2,12);data.writeUInt32BE(payload.length,header-4);payload.copy(data,header);return data;}
+const bank=ccnk('FBCh',privateState),program=ccnk('FPCh',bytes(state));
+assert.equal(extractVitalPreset([bank],'Vital').names[0],'Lead · 雪');
+assert.equal(extractVitalPreset([program],'Vital').names[0],'Lead · 雪');
+const vstw=Buffer.alloc(16);vstw.write('VstW');vstw.writeUInt32BE(8,4);vstw.writeUInt32BE(1,8);
+assert.equal(extractVitalPreset([Buffer.concat([vstw,bank])],'Vital').names[0],'Lead · 雪');
+const wrong=[{...state,preset_name:''},{...state,preset_name:undefined},{...state,preset_name:17},{...state,synth_version:undefined},{...state,settings:[]},{...state,preset_name:'Bad\u0001Name'},{preset_name:'Fake',nested:state},{...state,preset_name:'x'.repeat(181)}];
+for(const object of wrong)assert.equal(extractVitalPreset([bytes(object)],'Vital').names.length,0);
+assert.equal(extractVitalPreset([Buffer.from('{"preset_name":"Truncated"')],'Vital').names.length,0);
+const badBank=Buffer.from(bank);badBank.writeUInt32BE(0xffffffff,156);
+assert.equal(extractVitalPreset([badBank],'Vital').names.length,0);
+assert.equal(extractVitalPreset([Buffer.from('{"preset_name":"Plausible"}\0'),bytes(state)],'Vital').names[0],'Lead · 雪');
+console.log('PASS: Vital official-schema synthetic fixtures (raw JSON, NUL/private tail, JUCE VstW/FBCh and FPCh), Unicode, root-only name, malformed/unnamed states, and wrapper bounds. No real Vital host-state fixture available.');

@@ -11,8 +11,8 @@ app.whenReady().then(async()=>{try{
   if(process.env.WEB_URL)await win.loadURL(process.env.WEB_URL);else await win.loadFile(path.resolve('dist/index.html'));
   let remote=[];win.webContents.session.webRequest.onBeforeRequest((d,cb)=>{if(/^https?:/.test(d.url))remote.push(d.url);cb({});});
   const b64=fs.readFileSync(song).toString('base64');
-  const model=await win.webContents.executeJavaScript(`(async()=>{window.__kontaktBytes=Uint8Array.from(atob('${b64}'),c=>c.charCodeAt(0));const song=await window.__s1.readSong('comparison.song',window.__kontaktBytes.buffer);return {parts:song.tracks.reduce((n,t)=>n+t.parts.length,0),plugins:song.tracks.flatMap(t=>t.plugins.filter(p=>p.format==='instrument'&&/Kontakt/.test(p.name)).map(p=>({track:t.name,names:p.presetNames,encrypted:p.presetEncrypted,source:p.presetSource,note:p.presetNote})))}})()`);
-  assert.equal(model.parts,34);assert.equal(model.plugins.length,6);assert.equal(model.plugins.filter(p=>p.encrypted).length,3);
+  const model=await win.webContents.executeJavaScript(`(async()=>{window.__kontaktBytes=Uint8Array.from(atob('${b64}'),c=>c.charCodeAt(0));const song=await window.__s1.readSong('comparison.song',window.__kontaktBytes.buffer);return {parts:song.tracks.reduce((n,t)=>n+t.parts.length,0),plugins:song.tracks.flatMap(t=>t.plugins.filter(p=>p.format==='instrument'&&/Kontakt/.test(p.name)).map(p=>({track:t.name,names:p.presetNames,encrypted:p.presetEncrypted,empty:p.presetEmpty,source:p.presetSource,note:p.presetNote})))}})()`);
+  assert.equal(model.parts,34);assert.equal(model.plugins.length,6);assert.equal(model.plugins.filter(p=>p.encrypted).length,3);assert.equal(model.plugins.filter(p=>p.empty).length,1);
   assert.deepEqual(model.plugins.flatMap(p=>p.names),['YellowRiver GuZheng2.0','Cello']);
   const label=locale==='zh-CN'?'加密音源无法读取':'Encrypted instrument cannot be read';
   for(const p of model.plugins.filter(p=>p.encrypted))assert.equal(p.note,label);
@@ -21,7 +21,7 @@ app.whenReady().then(async()=>{try{
   await win.webContents.executeJavaScript("(()=>{const b=[...document.querySelectorAll('.toolbar button')].find(x=>x.textContent.includes('F3'));if(b.getAttribute('aria-expanded')!=='true')b.click();})()");
   await new Promise(r=>setTimeout(r,100));
   const ui=await win.webContents.executeJavaScript(`({badges:[...document.querySelectorAll('.presetBadge')].map(e=>e.textContent),page:document.documentElement.scrollWidth,viewport:innerWidth})`);
-  assert.equal(ui.badges.filter(t=>t.includes(label)).length,3);assert(ui.badges.some(t=>t.includes('YellowRiver GuZheng2.0')));assert(ui.badges.some(t=>t.includes('Cello')));assert(!ui.badges.some(t=>t.includes('New (default)')));assert(ui.page<=ui.viewport+1);
+  assert.equal(ui.badges.filter(t=>t.includes(label)).length,3);assert.equal(ui.badges.filter(t=>t.includes(locale==='zh-CN'?'未加载音源':'No instrument loaded')).length,1);assert(ui.badges.some(t=>t.includes('YellowRiver GuZheng2.0')));assert(ui.badges.some(t=>t.includes('Cello')));assert(!ui.badges.some(t=>t.includes('New (default)')));assert(ui.page<=ui.viewport+1);
   // Local builds must never contact a network while opening project data.
   if(!process.env.WEB_URL)assert.deepEqual(remote,[]);
   fs.mkdirSync('logs/kontakt-comparison',{recursive:true});fs.writeFileSync(`logs/kontakt-comparison/ui-${locale}.png`,(await win.capturePage()).toPNG());

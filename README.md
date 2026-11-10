@@ -30,17 +30,19 @@ SongScope 是一个只读歌曲浏览器：不需要安装工程里的 VST 插�
 
 ### 只读编排
 
-- 左边是轨道，右边是按工程内实际位置和长度排列的 MIDI 块。
+- 左边是轨道，右边是按工程内实际位置和长度排列的 MIDI 和音频块。
 - MIDI 块内绘制音符缩略图，时间标尺以小节显示，支持缩放和横向 / 纵向滚动。
 - 点击片段进行多选，不能拖动、剪切、修改音符或写回工程。
-- 音频轨显示素材文件名、事件名及工程保存的路径；编排和通道中均可展开查看。不访问外部素材，不提供音频导出，不渲染波形。
+- 音频片段按实际起点与长度显示，名称优先音块名、其次 sample 文件名；重复片段不合并，重叠片段分行显示。点击查看详情，通道可展开素材路径。秒制起点 / 时长按速度图分别换算；未知时间格式明确列为无法定位，曲线变速按节点阶梯近似。
+- F2 钢琴窗有黑白键、音高 / MIDI 编号、小节拍点网格、音符名称、双向缩放和完整 128 键范围；点击音符可看位置、时值和力度，中央 C 使用 C4 / MIDI 60。支持片段偏移和边界裁切。
+- 不访问外部素材，不提供音频导出，不渲染波形。
 
 ### 通道与插件
 
 - 顶部点击「通道 / 插件」展开底部横向通道区。
 - 每个轨道通道显示加载的 VSTi、插入效果链、发送目标及可识别的目标效果。
 - 左侧选择轨道时，下方自动滚到对应通道并高亮；重复点击与重新展开也会重新定位。
-- Kontakt 可读取受支持保存状态中的实际音色槽位名称；经验证的加密状态无法取名时显示「加密音源无法读取」。Rack 名称不会冒充音色名，未知格式和空实例仍显示未识别；全过程不调用 Kontakt。
+- Kontakt 可读取受支持保存状态中的实际音色槽位名称；经验证的加密状态无法取名时显示「加密音源无法读取」。Rack 名称不会冒充音色名，空实例显示「未加载音源」，未知格式仍显示未识别；全过程不调用 Kontakt。
 - 文件夹没有独立通道。无法识别的插件或槽位会显示「无 / 未识别」。
 
 ### MIDI 导出
@@ -99,6 +101,8 @@ npm run dist:linux  # Linux AppImage / deb
 | F3 | 显示 / 隐藏底部混音台 |
 | Esc | 关闭帮助 |
 
+F2 / F3 面板互斥：打开 MIDI 窗会收起插件窗，反之亦然；插件 Rack 不显示 MIDI 导出按钮。
+
 采用 [Studio One 常用快捷键布局](https://pae-web.presonusmusic.com/downloads/products/pdf/STUDIO_ONE_-_KEY_COMMANDS_SHEET.pdf)；F2 仅查看，不编辑。Mac 可能需要 Fn。输入框、修饰键组合与按键连发不会触发这些切换。
 
 ## 乐器预设名
@@ -106,8 +110,10 @@ npm run dist:linux  # Linux AppImage / deb
 - 直接读取工程内保存的 VST3 / VST2 插件状态，不安装或运行插件，也不查找外部采样文件。
 - Serum 2：读取 XferJson 元数据中的预设名，已在授权真实工程中验证两个实例。
 - Serum / 通用 VST2：在保存了 FXP program name 的情况下读取该字段。
-- Kontakt：读取可见预设 / 快照元数据及 `.nki` / `.nkm` / `.nksn` 文件引用，多条可同时显示。文件引用明确标注，不等同于运行时音色加载验证；尚无用户真实 Kontakt 工程验证。
+- Kontakt：受支持的 NI 容器读取音色槽位名称（已在真实工程验证古筝与 Cello），Rack 名不当作音色名；经验证的空实例显示「未加载音源」，经验证的加密状态无法取名时显示「加密音源无法读取」。旧格式可见文件引用明确标注，不等同于运行时验证。
 - 不把 S1 自动生成的 `3 - Serum 2.vstpreset` 等缓存文件名冒充音色名。压缩、加密、未知私有状态或未保存名称时显示「未识别」。
+
+支持范围与样本证据见 [预设支持表](docs/preset-support.md)：Vital、Sylenth1、Omnisphere、StylusRMX、Falcon 已加入部分明确格式的读取，尚非全版本 / 真实宿主全量验证；Nexus 十个实际实例仍未恢复出名称。
 
 ## Cloudflare Pages 部署（原生 Git 集成）
 
@@ -150,6 +156,10 @@ Github@Yukinsnow · Bilibili@純白
 npm run build
 xvfb-run -a npx electron --no-sandbox scripts/test-timing-shortcuts.cjs
 xvfb-run -a npx electron --no-sandbox scripts/test-presets.cjs
+xvfb-run -a npx electron --no-sandbox scripts/test-audio-events.cjs
+xvfb-run -a npx electron --no-sandbox scripts/test-arrangement-inspector.cjs
+node scripts/test-note-window.cjs
+node scripts/test-kontakt.cjs
 ```
 
 合成回归覆盖 120→80→150→100 BPM、4/4→3/4→7/8→5/4、单片段归零、MIDI 元事件重读、F1/F2/F3、输入框与连发保护，以及 Serum/Kontakt/通用预设元数据、UTF-16 引用、损坏和未知状态。CI 在 Linux 构建前运行这些验证。

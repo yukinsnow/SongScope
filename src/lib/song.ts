@@ -8,6 +8,7 @@ import {
 import { extractSavedPreset } from "./preset-worker";
 import { readTimeMaps } from "./timing";
 import { decodeMusicx } from "./musicx";
+import { readAudioEvents } from "./audio";
 
 const XML_ENTRIES = [
   "Song/song.xml",
@@ -94,6 +95,7 @@ export async function readSong(fileName: string, data: ArrayBuffer): Promise<S1S
 
   // Resolve saved references only. Never read, fetch, decode or export audio files.
   for (const track of tracks) {
+    track.audioEvents = readAudioEvents(track.element, mediaPool, tempoMap);
     const seen = new Set<string>();
     for (const event of descendants(track.element, "AudioEvent")) {
       const clipId = attr(event, "clipID");
@@ -106,6 +108,10 @@ export async function readSong(fileName: string, data: ArrayBuffer): Promise<S1S
       if (!seen.has(key)) track.audioFiles.push({clipId,eventName,name,path});
       seen.add(key);
     }
+  }
+
+  if (tempoMap.some(e => e.curveType !== 0) && tracks.some(t => t.audioEvents.some(e => e.timeFormat === 0 || e.positionTimeFormat === 0))) {
+    warnings.push(tr("曲线变速工程的秒制音频片段位置 / 长度当前按速度节点阶梯近似。"));
   }
 
   // ---------- MIDI content (.musicx) ----------
@@ -143,7 +149,7 @@ export async function readSong(fileName: string, data: ArrayBuffer): Promise<S1S
     if(size&&size>32*1024*1024){p.presetNote=tr("插件状态超过 32MB，未提取预设");continue;}
     try{
       const result=await extractSavedPreset(await file.async("uint8array"),p.name);
-      p.presetNames=result.names;p.preset=result.names[0]??null;p.presetSource=result.source;p.presetNote=result.note;p.presetEncrypted=result.encrypted;
+      p.presetNames=result.names;p.preset=result.names[0]??null;p.presetSource=result.source;p.presetNote=result.note;p.presetEncrypted=result.encrypted;p.presetEmpty=result.empty;
     }catch{p.presetNote=tr("无法读取插件状态文件");}
   }
   const channelEffects = readChannelEffects(xmlDocs["Devices/audiomixer.xml"]);
@@ -285,6 +291,7 @@ function readTrack(el: Element): S1Track {
     parentFolderId: attr(el, "parentFolder") ?? null,
     element: el,
     parts,
+    audioEvents: [],
     audioFiles: [],
     instrument: null,
     plugins: [],

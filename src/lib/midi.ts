@@ -30,10 +30,12 @@ export function partNotes(part: S1Part): NoteEvent[] {
 export function partRelativeNotes(part: S1Part): NoteEvent[] {
   const off = part.offset || 0;
   const len = part.length ?? Infinity;
-  return part.notes
-    .map((n) => ({ ...n, start: n.start - off }))
-    .filter((n) => n.start + n.length >= 0 && n.start < len)
-    .map((n) => ({ ...n, start: Math.max(0, n.start) }));
+  return part.notes.flatMap(n => {
+    const start = Math.max(0, n.start - off);
+    const end = Math.min(len, n.start - off + n.length);
+    return Number.isFinite(start) && Number.isFinite(end) && end > start
+      ? [{ ...n, start, length: end - start }] : [];
+  });
 }
 
 export function exportPartsToMidi(refs: PartRef[], opts: ExportOptions = {}): Uint8Array {

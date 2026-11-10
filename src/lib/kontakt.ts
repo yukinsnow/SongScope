@@ -2,8 +2,10 @@
 const MAX_DECODED = 32 * 1024 * 1024;
 const MAX_TOTAL = 64 * 1024 * 1024;
 const MAX_ITEMS = 20000;
-export interface KontaktState { names: string[]; encrypted: boolean; source: 'program' | 'files' }
+export interface KontaktState { names: string[]; encrypted: boolean; empty: boolean; source: 'program' | 'files' }
 type Item = { domain: string; id: number; start: number; end: number };
+type ProgramState = { names: string[]; empty: boolean };
+type BankSummary = { count: number; emptyCount: number; incomplete: boolean };
 const invalid = () => new Error('Invalid or unsupported Kontakt state');
 
 /** Strict FastLZ levels 1/2: reject truncated input, bad distances and size mismatches. */
@@ -41,6 +43,7 @@ export function fastLz(src: Uint8Array, expected: number): Uint8Array {
 
 export function readKontaktState(chunks: Uint8Array[]): KontaktState | null {
   const names = new Set<string>(), programs = new Set<string>();
+  const banks: BankSummary = { count: 0, emptyCount: 0, incomplete: false };
   let encrypted = false, recognized = false, total = 0, items = 0;
   const visit = (data: Uint8Array, start: number, end: number, depth: number): number => {
     if (depth > 32 || ++items > MAX_ITEMS || start + 48 > end) throw invalid();
@@ -87,7 +90,7 @@ export function readKontaktState(chunks: Uint8Array[]): KontaktState | null {
         }
       }
       // Instrument path records are read below, never by harvesting script strings.
-      collectInstrumentPaths(data.subarray(item.start, item.end), item, names, programs);
+      if (!collectInstrumentPaths(data.subarray(item.start, item.end), item, names, programs, banks)) banks.incomplete = true;
     }
     if (dataEnd + 8 > frameEnd || u32(dataEnd) !== 1) throw invalid();
     const count = u32(dataEnd + 4);
@@ -105,40 +108,50 @@ export function readKontaktState(chunks: Uint8Array[]): KontaktState | null {
     recognized = true;
     if (visit(chunk, 0, chunk.length, 0) !== chunk.length) throw invalid();
   }
-  return recognized ? { names: [...(programs.size ? programs : names)].slice(0, 64), encrypted, source: programs.size ? 'program' : 'files' } : null;
+  // Absence of a name is not evidence of an empty rack. Require a fully parsed
+  // BANK with a zero occupied-slot bitmap, and no opaque/encrypted bank content.
+  const empty = !encrypted && !banks.incomplete && banks.count > 0 && banks.emptyCount === banks.count && !names.size && !programs.size;
+  return recognized ? { names: [...(programs.size ? programs : names)].slice(0, 64), encrypted, empty, source: programs.size ? 'program' : 'files' } : null;
 }
 
-function collectInstrumentPaths(data: Uint8Array, item: Item, names: Set<string>, programs: Set<string>) {
-  if (item.domain !== 'DSIN' || item.id !== 109 || data.length < 28) return;
+function collectInstrumentPaths(data: Uint8Array, item: Item, names: Set<string>, programs: Set<string>, banks: BankSummary) {
+  if (item.domain !== 'DSIN' || item.id !== 109) return true;
+  if (data.length < 28) return false;
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
   // Only the verified single-item Kontakt dictionary is supported. Unknown
   // versions are left unidentified; never fall back to names in script text.
-  if (view.getUint32(0, true) !== 1 || view.getUint32(4, true) !== 1 || view.getUint32(8, true) !== 1 || view.getUint32(16, true) !== 0) return;
+  if (view.getUint32(0, true) !== 1 || view.getUint32(4, true) !== 1 || view.getUint32(8, true) !== 1 || view.getUint32(16, true) !== 0) return false;
   const size = view.getUint32(12, true), end = 20 + size;
   // Last word is NOT a fixed magic: the verified Cello uses 0x71bab847,
   // while the empty/guzheng samples use 0x8565620d. Preserve the boundary.
-  if (end + 8 !== data.length || view.getUint32(end, true) !== 0) return;
+  if (end + 8 !== data.length || view.getUint32(end, true) !== 0) return false;
   const found: string[] = [];
-  const loaded: string[] = [];
+  const loaded: (ProgramState | null)[] = [];
   let pos = 20, objects = 0;
   while (pos < end) {
-    if (pos + 6 > end || ++objects > MAX_ITEMS) return;
+    if (pos + 6 > end || ++objects > MAX_ITEMS) return false;
     const id = view.getUint16(pos, true), stop = pos + 6 + view.getUint32(pos + 2, true);
-    if (stop > end) return;
-    if (id === 3) loaded.push(...loadedPrograms(data, pos + 6, stop));
+    if (stop > end) return false;
+    if (id === 3) loaded.push(loadedPrograms(data, pos + 6, stop));
     if (id === 0x4b) {
       const files = pathTable(data.subarray(pos + 6, stop));
-      if (!files) return;
+      if (!files) return false;
       found.push(...files);
     }
     pos = stop;
   }
   for (const name of found) if (names.size < 64) names.add(name);
-  for (const name of loaded) if (programs.size < 64) programs.add(name);
+  for (const bank of loaded) {
+    banks.count++;
+    if (!bank) { banks.incomplete = true; continue; }
+    if (bank.empty) banks.emptyCount++;
+    for (const name of bank.names) if (programs.size < 64) programs.add(name);
+  }
+  return true;
 }
 
 /** BANK's own name is the Rack. Only names inside occupied program slots count. */
-function loadedPrograms(data: Uint8Array, start: number, end: number): string[] {
+function loadedPrograms(data: Uint8Array, start: number, end: number): ProgramState | null {
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
   type Block = { id: number; start: number; end: number };
   type Structure = { publicStart: number; publicEnd: number; children: Block[]; end: number };
@@ -166,37 +179,41 @@ function loadedPrograms(data: Uint8Array, start: number, end: number): string[] 
   };
   try {
     const bank = structure(start, end), names: string[] = [];
-    if (bank.end !== end) return [];
-    for (const slotList of bank.children.filter(c => c.id === 0x37)) {
+    if (bank.end !== end) return null;
+    const slotLists = bank.children.filter(c => c.id === 0x37);
+    if (slotLists.length !== 1) return null;
+    let empty = false;
+    for (const slotList of slotLists) {
       need(slotList.start, 8, slotList.end);
       const occupied = view.getBigUint64(slotList.start, true);
       const containers = blocks(slotList.start + 8, slotList.end);
+      empty = occupied === 0n && containers.length === 0;
       let index = 0;
       for (let slot = 0; slot < 64; slot++) {
         if (!(occupied & (1n << BigInt(slot)))) continue;
         const block = containers[index++];
-        if (!block || block.id !== 0x29) return [];
+        if (!block || block.id !== 0x29) return null;
         const container = structure(block.start, block.end);
-        if (container.end !== block.end) return [];
+        if (container.end !== block.end) return null;
         for (const list of container.children.filter(c => c.id === 0x36)) {
           const count = u32(list.start, list.end); let p = list.start + 4;
-          if (count > 128) return [];
+          if (count > 128) return null;
           for (let i = 0; i < count; i++) {
             const program = structure(p, list.end); p = program.end;
             const length = u32(program.publicStart, program.publicEnd);
-            if (length < 1 || length > 180) return [];
+            if (length < 1 || length > 180) return null;
             need(program.publicStart + 4, length * 2, program.publicEnd);
             const name = new TextDecoder('utf-16le', { fatal: true }).decode(data.subarray(program.publicStart + 4, program.publicStart + 4 + length * 2)).trim();
-            if (!name || /[\u0000-\u001f\ufffd]/.test(name)) return [];
+            if (!name || /[\u0000-\u001f\ufffd]/.test(name)) return null;
             names.push(name);
           }
-          if (p !== list.end) return [];
+          if (p !== list.end) return null;
         }
       }
-      if (index !== containers.length) return [];
+      if (index !== containers.length) return null;
     }
-    return names.slice(0, 64);
-  } catch { return []; }
+    return { names: names.slice(0, 64), empty };
+  } catch { return null; }
 }
 
 /** Kontakt FILENAME_LIST_EX v3. Parse every record to its exact boundary. */

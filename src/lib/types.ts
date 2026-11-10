@@ -26,6 +26,23 @@ export interface S1Part {
   element: Element;
 }
 
+export interface S1AudioEvent {
+  clipId: string | null;
+  /** Saved event name, or the source sample filename when unnamed. */
+  name: string;
+  eventName: string;
+  sampleName: string;
+  path: string | null;
+  /** Arrangement position and duration normalized to quarter-note beats. */
+  start: number | null;
+  length: number | null;
+  /** Source offset in the original event timeFormat (0 = seconds, 2 = beats). */
+  offset: number;
+  timeFormat: number;
+  /** Start is stored in the track's unit, independently of the event length. */
+  positionTimeFormat: number;
+}
+
 export interface S1Track {
   id: string;
   name: string;
@@ -36,6 +53,7 @@ export interface S1Track {
   parentFolderId: string | null;
   element: Element;
   parts: S1Part[];
+  audioEvents: S1AudioEvent[];
   audioFiles: { clipId: string | null; eventName: string; name: string; path: string | null }[];
   instrument: string | null;
   plugins: PluginRef[];
@@ -58,6 +76,8 @@ export interface PluginRef {
   presetNote?: string;
   /** Set only from a validated NI EncryptionItem, not from a failed decoder. */
   presetEncrypted?: boolean;
+  /** Set only when the validated Kontakt state contains no loaded instruments. */
+  presetEmpty?: boolean;
 }
 
 export interface TempoChange { beat: number; bpm: number; curveType: number; raw: Record<string,string> }

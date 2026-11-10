@@ -1,0 +1,12 @@
+const assert = require('node:assert/strict');
+const esbuild = require('esbuild');
+const moduleObject = {exports:{}};
+const code = esbuild.buildSync({stdin:{contents:"export {partRelativeNotes} from './src/lib/midi'; export {pitchName} from './src/components/PianoRoll';",resolveDir:process.cwd()},bundle:true,write:false,format:'cjs'}).outputFiles[0].text;
+new Function('module','exports','navigator',code)(moduleObject,moduleObject.exports,{language:'en',languages:['en']});
+const {partRelativeNotes,pitchName}=moduleObject.exports;
+const note=(start,length)=>({start,length,pitch:60,velocity:90});
+const part={offset:4,length:4,notes:[note(2,1),note(2,3),note(5,1),note(7,3),note(8,1),note(1,3),note(6,0)]};
+assert.deepEqual(partRelativeNotes(part),[note(0,1),note(1,1),note(3,1)]);
+assert.deepEqual([0,60,61,127].map(pitchName),['C-1','C4','C♯4','G9']);
+assert.deepEqual(partRelativeNotes({...part,length:0}),[]);
+console.log('PASS: note-window clipping at both edges, zero/outside notes excluded, MIDI 0/60/61/127 pitches');
