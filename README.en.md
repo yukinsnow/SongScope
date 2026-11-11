@@ -28,11 +28,11 @@ The interface automatically uses Chinese when the system/browser's preferred lan
 - MIDI export: selected clips, the open piano-roll clip or the arrangement. Single clips start at zero; multi-clip exports retain arrangement positions. Tempo and meter events are included. Continuous tempo curves currently use a clearly labeled step approximation.
 - Mobile MIDI exports use system sharing when supported, otherwise download. Desktop exports use a save dialog. Audio sources are never added to MIDI export.
 
-Preset coverage and evidence: [support matrix](docs/preset-support.md). Vital, Sylenth1, Omnisphere, StylusRMX and Falcon have readers for limited explicit formats, not all versions or real-host variants. Ten real Nexus instances remain unreadable.
+Preset coverage and evidence: [support matrix](docs/preset-support.md). Omnisphere names were verified in one real project's saved audio-transform state, displayed on its owning channel with an archived-state label. Vital, Sylenth1, StylusRMX and Falcon have readers for limited explicit formats, not all versions or real-host variants. Ten real Nexus instances remain unreadable. Further Kontakt decoding experiments recovered no additional encrypted names; see the [file-only follow-up](docs/kontakt-decode-followup.md).
 
 ## Older-version compatibility copies (experimental)
 
-The overview has an **Export for an older version** panel targeting Studio One 7 / 6. It checks source versions and supported state before export, lists changes, limitations or blockers, and generates a separate `.song`. The original project and saved generator metadata stay unchanged.
+The overview has an **Export for an older version** panel for 8 / 7 / 6 sources targeting lower Studio One 7 / 6 / 5 versions. It checks source versions and supported state before export, lists changes, limitations or blockers, and generates a separate `.song`. Newer Pro EQ conversion to version 5 is unverified and blocks export rather than removing the plugin. The original project and saved generator metadata stay unchanged.
 
 This is not a vendor-supported Save As and does not translate all new features. **Opening in the target DAW is not yet verified.** Existing embedded content and external source references are retained, not rendered or collected. Put the copy next to the original project and verify media, effects, routing and automation in the target application. Third-party plugin states remain unchanged; plugin version compatibility is not guaranteed.
 

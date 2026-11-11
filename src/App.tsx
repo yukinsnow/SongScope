@@ -150,7 +150,7 @@ function HelpDialog({onClose}:{onClose:()=>void}){
 
 function InstrumentPreset({plugin}:{plugin:PluginRef|undefined}){
  if(!plugin)return null;
- return <div className="presetBadge" title={plugin.presetNote||plugin.presetSource||tr("预设未识别")}><small>{tr("PRESET / 预设")}</small>{plugin.presetNames?.length?plugin.presetNames.map((name,i)=><div key={i}>{name}</div>):<div className="muted">{tr(plugin.presetEncrypted?"加密音源无法读取":plugin.presetEmpty?"未加载音源":"未识别")}</div>}{plugin.presetSource&&<small>{plugin.presetSource}</small>}</div>;
+ return <div className="presetBadge" title={plugin.savedBeforeTransform?tr("已渲染为音频；显示转换前保存的乐器状态，非当前运行插件。"):plugin.presetNote||plugin.presetSource||tr("预设未识别")}><small>{tr("PRESET / 预设")}</small>{plugin.savedBeforeTransform&&<small>{tr("音频转换前保存状态")}</small>}{plugin.presetNames?.length?plugin.presetNames.map((name,i)=><div key={i}>{name}</div>):<div className="muted">{tr(plugin.presetEncrypted?"加密音源无法读取":plugin.presetEmpty?"未加载音源":"未识别")}</div>}{plugin.presetSource&&<small>{plugin.presetSource}</small>}</div>;
 }
 
 function AudioFiles({track}:{track:S1Track}) {

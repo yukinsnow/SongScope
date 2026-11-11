@@ -39,6 +39,7 @@ jobs:
           node scripts/test-note-window.cjs
           node scripts/test-vital-preset.cjs
           xvfb-run -a npx electron --no-sandbox scripts/test-vendor-presets.cjs
+          xvfb-run -a npx electron --no-sandbox scripts/test-transformed-presets.cjs
           xvfb-run -a npx electron --no-sandbox scripts/test-audio-events.cjs
           xvfb-run -a npx electron --no-sandbox scripts/test-arrangement-inspector.cjs
       - name: Package

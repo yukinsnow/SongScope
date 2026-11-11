@@ -140,8 +140,13 @@ export async function readSong(fileName: string, data: ArrayBuffer): Promise<S1S
 
   // ---------- plugin model ----------
   const instruments = readInstruments(xmlDocs["Devices/audiosynthfolder.xml"]);
-  for(const entry of instruments){
-    const p=entry.plugin,path=p.presetPath;
+  const transformed = new Map<S1Track, PluginRef>();
+  for (const track of tracks) {
+    const saved = readTransformedInstrument(track.element);
+    if (saved) transformed.set(track, saved);
+  }
+  for(const p of [...instruments.map(entry => entry.plugin), ...transformed.values()]){
+    const path=p.presetPath;
     p.presetNames=[];p.presetSource=null;
     if(!path){p.presetNote=tr("工程未保存插件状态路径");continue;}
     const file=findZipEntry(zip,path.replace(/^media:\/+/,''));
@@ -173,12 +178,14 @@ export async function readSong(fileName: string, data: ArrayBuffer): Promise<S1S
     if (!entry && t.channelId) {
       entry = instruments.find((i) => i.uniqueId === t.channelId) ?? null;
     }
-    t.instrument = entry?.plugin.name ?? ch?.instrumentOutName ?? null;
+    const savedInstrument = !entry && !ch?.instrumentOutName ? transformed.get(t) : undefined;
+    t.instrument = entry?.plugin.name ?? ch?.instrumentOutName ?? savedInstrument?.name ?? null;
     t.plugins = [];
     if (entry) t.plugins.push(entry.plugin);
     else if (ch?.instrumentOutName) {
       t.plugins.push({ name: ch.instrumentOutName, format: "instrument", preset: null });
     }
+    else if (savedInstrument) t.plugins.push(savedInstrument);
     const fx = t.channelId ? channelEffects.get(t.channelId) : undefined;
     if (fx) t.plugins.push(...fx);
     const mixerId = ch?.instrumentOutObjectID || t.channelId;
@@ -213,6 +220,7 @@ export async function readSong(fileName: string, data: ArrayBuffer): Promise<S1S
   }
   const plugins = dedupePlugins([
     ...instruments.map((i) => i.plugin),
+    ...transformed.values(),
     ...[...channelEffects.values()].flat(),
     ...extras,
   ]);
@@ -397,6 +405,27 @@ function readInstruments(doc: Document | undefined): InstrumentEntry[] {
     }
   }
   return out;
+}
+
+/** Read only the track's own structured audio-transform attachment. Do not
+ * associate a folder's descendant instruments or arbitrary ghostData by name. */
+function readTransformedInstrument(track: Element): PluginRef | null {
+  const states = descendants(track, "TransformedSynthState").filter(state => {
+    const attachment = state.parentElement, container = attachment?.parentElement;
+    if (!container || xid(state) !== "data" || attachment?.tagName !== "MediaAttachment" ||
+        attr(attachment, "id") !== "transform" || xid(container) !== "attachments") return false;
+    return container.parentElement === track;
+  });
+  // Ambiguous attachments must not silently select one saved instrument.
+  if (states.length !== 1) return null;
+  const state = states[0];
+  const ghost = kids(state).find(el => el.tagName === "Attributes" && xid(el) === "ghostData");
+  const ci = readClassInfo(ghost);
+  const preset = kids(state).find(el => el.tagName === "Url" && xid(el) === "presetPath");
+  const path = attr(preset, "url");
+  if (!ci.name || !path || attr(state, "format") !== "vstpreset") return null;
+  return { ...ci, name: ci.name, format: "instrument", preset: null,
+    presetPath: path, savedBeforeTransform: true };
 }
 
 interface MusicChannel {

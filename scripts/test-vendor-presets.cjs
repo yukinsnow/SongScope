@@ -22,6 +22,12 @@ app.whenReady().then(async()=>{try{
  await run('Omnisphere',Buffer.concat([prefix,omni,Buffer.from([0])]),['Warm & Clear']);
  await run('Omnisphere',xml('<SynthMaster><ENTRYDESCR name="Only Rack"/></SynthMaster>'),[]);
  await run('Omnisphere',xml('<SynthMaster><SynthSubEngine><ENTRYDESCR name="Decoy"/>'),[]);
+ const nested=xml('<SynthMaster><ENTRYDESCR name="Wrong Multi"/><SynthSubEngine><SynthEngine><SYNTHENG><ENTRYDESCR name="Actual Nested Patch"/><VOICE><ENTRYDESCR name="Wrong Layer"/></VOICE></SYNTHENG></SynthEngine><SynthEngine><SYNTHENG name="Legacy Part"/></SynthEngine></SynthSubEngine></SynthMaster>');
+ await run('Omnisphere',nested,['Actual Nested Patch','Legacy Part']);
+ await run('Omnisphere',xml('<SynthMaster><Extra><SynthSubEngine><SynthEngine><SYNTHENG name="Nested Decoy"/></SynthEngine></SynthSubEngine></Extra></SynthMaster>'),[]);
+ await run('Omnisphere',xml('<SynthMaster><SynthSubEngine><SynthEngine><SYNTHENG><ENTRYDESCR name="Ambiguous A"/><ENTRYDESCR name="Ambiguous B"/></SYNTHENG></SynthEngine></SynthSubEngine></SynthMaster>'),[]);
+ await run('Omnisphere',xml('<SynthMaster><SynthSubEngine>'+Array.from({length:9},(_,i)=>'<SynthEngine><SYNTHENG name="Part '+i+'"/></SynthEngine>').join('')+'</SynthSubEngine></SynthMaster>'),Array.from({length:8},(_,i)=>'Part '+i));
+ await run('Omnisphere',xml('<SynthMaster><SynthSubEngine><SynthEngine><SYNTHENG><ENTRYDESCR name="Default" library="User"/></SYNTHENG></SynthEngine></SynthSubEngine></SynthMaster>'),['Default']);
  await run('StylusRMX',xml('<StylusRMXMaster><Part Loop="Loop 1"/><Part Loop="Loop 2"/><Effect name="Decoy"/></StylusRMXMaster>'),['Loop 1','Loop 2']);
  await run('UVI Falcon',xml('<UVI4><Program Name="Program" DisplayName="Actual patch"><Layers><Layer DisplayName="Wrong layer"/></Layers></Program></UVI4>'),['Actual patch']);
  await run('UVI Falcon',xml('<UVI4><Program Name="Internal Program"/></UVI4>'),[]);
@@ -33,5 +39,7 @@ app.whenReady().then(async()=>{try{
  const uvi='logs/vendor-preset-research/uvi-FXControls.uvip';if(fs.existsSync(uvi)){real.officialUvi=await run('UVI Falcon',fs.readFileSync(uvi),['FX Controls']);}
  const dir='/tmp/s1real/unpacked/Presets/Synths';real.nexus=[];
  if(fs.existsSync(dir))for(const file of fs.readdirSync(dir).filter(n=>/Nexus.*\.vstpreset$/.test(n))){const b=fs.readFileSync(path.join(dir,file)),o=Number(b.readBigUInt64LE(40));const s=Number(b.readBigUInt64LE(o+12)),l=Number(b.readBigUInt64LE(o+20));await run('Nexus',b.subarray(s,s+l),[]);real.nexus.push(file);}
- console.log(JSON.stringify({checks,real,coverage:'Schema tests; Nexus actual host states verified unsupported. Other vendor host states not verified.'},null,2));app.quit();
+ const actualOmni='/tmp/s1real/unpacked/Presets/Transformed Synths/Omnisphere.vstpreset';
+ if(fs.existsSync(actualOmni)){const b=fs.readFileSync(actualOmni),o=Number(b.readBigUInt64LE(40)),s=Number(b.readBigUInt64LE(o+12)),l=Number(b.readBigUInt64LE(o+20));real.omnisphere=await run('Omnisphere',b.subarray(s,s+l),['CLUB │ Bad Boy Icon Bells','Default']);const c=Buffer.from(b.subarray(s,s+l)),xmlBytes=Number(c.readBigUInt64LE(16));c.writeUInt32LE(xmlBytes+500,16);await run('Omnisphere',c,null);}
+ console.log(JSON.stringify({checks,real,coverage:'Schema tests plus one actual Omnisphere host state; ten actual Nexus host states verified unsupported. Other vendor host states not verified.'},null,2));app.quit();
 }catch(e){console.error(e.stack||e);app.exit(1)}});

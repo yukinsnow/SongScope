@@ -8,9 +8,11 @@ track name, filename, or installed software.
 
 ## Implemented scope
 
-- Recognized Studio One 7 (format 8) or Fender Studio Pro 8 (format 9) sources
-  can generate a **new** `.song` compatibility copy targeting Studio One 7
-  (format 8) or Studio One 6 (format 7), strictly downward only.
+- Recognized Studio One 6 (format 7), Studio One 7 (format 8) or Fender Studio
+  Pro 8 (format 9) sources can generate a **new** `.song` compatibility copy
+  targeting Studio One 7 (format 8), 6 (format 7) or 5 (format 6), strictly
+  downward only: **8→7/6/5, 7→6/5, 6→5**. These are attempted compatibility
+  copies, not a promise that every input can pass preflight.
 - The source application version remains recorded unchanged. Only the format
   field is patched in metadata. We do not pretend an older application saved it.
 - Supported saved JSON Pro EQ states are serialized to the legacy native XML
@@ -23,8 +25,16 @@ track name, filename, or installed software.
   missing required parameters, unresolved preset references, path collisions,
   unsupported newer native DSP presets and the newer Compressor are blocked.
   There are no guessed defaults or automatic plugin removals.
-- Known structured CLAP-format declarations block a Studio One 6 target. A
+- Known structured CLAP-format declarations block Studio One 5 / 6 targets. A
   sample or track merely named “Clap” is not classified as a CLAP plugin.
+- Studio One 5 has narrower native-plugin coverage: newer JSON Pro EQ states
+  are blocked because a verified EQ³→EQ² parameter/automation mapping is not
+  available. A legacy Pro EQ class ID alone is **not** evidence of EQ³ and does
+  not cause a block; an explicit dynamic-EQ parameter schema does. Structured
+  native factory identities for De-esser, Vocoder, Lead Architect, Surround
+  Delay/Chorus and OpenAir2 also block 5. Track names and VST namesakes do not.
+  Lyrics/video tracks and spatial-audio features are not converted; the plan
+  explicitly warns about this. No plugins or features are silently deleted.
 - Unrelated archive members retain their exact uncompressed bytes, including
   third-party plugin states, MIDI performances, song layout and saved media.
   ZIP compression bytes may differ. Original ZIP/XML/model objects are not
@@ -68,6 +78,16 @@ project correctly. Verify the copy in the target version and keep the original.
   This is community-observed format evidence, **not a published vendor format
   specification**. SongScope's bounded TypeScript implementation was written
   independently rather than copying that GPL-licensed script.
+- [Studio One 6 official release notes](https://www.fmicassets.com/sites/presonus.com/img/studio-one-6/Studio%20One%206%20-%20Release%20Notes-2.pdf)
+  document the v6 backward-opening restriction, introduction of Pro EQ³,
+  De-esser and Vocoder in 6.0, surround/OpenAir2 in 6.5, and Lead Architect in
+  6.6. Native factory-name checks use these release boundaries, not labels that
+  users assign to tracks.
+- The original author-hosted [Convert Today downgrader](https://convert-today.com/studio-one-downgrader/)
+  explicitly declares Studio One 5→format 6 in its public JavaScript target
+  table. This is independent implementation evidence, **not an official file
+  format specification or a tested v5 playback claim**. No real Studio One 5
+  input specimen or installed target DAW was available for this extension.
 - Two authorized local real archives save `Studio Pro/8.1.2.113407` and
   `Studio Pro/8.2.0.114903`, both format 9, each with one newer JSON Pro EQ preset.
 
@@ -83,7 +103,12 @@ conversion, distinct auto-gain flags, missing state references, malformed metada
 and archive-name collisions. Available private samples are optional and never
 bundled or uploaded.
 
-Local real-archive validation for both targets:
+Synthetic validation covers every allowed downward pair, rejection of same-version
+or upward targets, all 5-specific blockers, old shared EQ IDs without dynamic
+markers, and native/VST namesake false positives. UI checks actually download
+7/6/5 copies in Chinese/English at desktop/mobile sizes.
+
+Local real-archive validation for the existing 7/6 targets:
 
 | Source archive | Files | Unchanged files | Audio events | MIDI parts |
 | --- | ---: | ---: | ---: | ---: |
@@ -94,3 +119,9 @@ Only metadata, mixer references and the one declared EQ state change. All
 third-party plugin bytes and original members remain unchanged; generated member
 contents are deterministic across repeat exports. These are **structural and
 parameter-preservation checks, not target-DAW opening/playback tests**.
+
+Both real archives correctly **block target 5** because they contain a newer
+JSON Pro EQ state. Their 7/6 exports remain unchanged (same three modified
+members). This is an explicit unsupported conversion, not successful v5
+compatibility validation. A MIDI/third-party-only synthetic archive passes all
+six downward version pairs with its original member bytes preserved.

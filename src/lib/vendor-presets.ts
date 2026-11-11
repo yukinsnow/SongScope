@@ -101,7 +101,8 @@ function xmlDocument(bytes: Uint8Array, root: string): { recognized: boolean; do
 
 /** null = unrecognized schema; recognized malformed/private schemas are definitive
  * unknown results, so generic scanners cannot harvest nested decoy names.
- * These added forms are schema-tested, not Studio One host-corpus verified.
+ * Omnisphere's SYNTHENG form is verified against an actual saved host state;
+ * other forms have the narrower verification described in the support document.
  */
 export function extractVendorPresetNames(chunks: Uint8Array[], pluginName: string): PresetDetails | null {
   const isSylenth = /sylenth\s*1/i.test(pluginName), isNexus = /nexus/i.test(pluginName);
@@ -122,10 +123,22 @@ export function extractVendorPresetNames(chunks: Uint8Array[], pluginName: strin
     const root = parsed.doc?.documentElement; if (!root) continue;
     if (isSpectra) {
       // ENTRYDESCR at master scope is the Multi/Rack, not the loaded patch.
-      for (const sub of Array.from(root.getElementsByTagName('SynthSubEngine')).slice(0, 8)) {
-        const engine = Array.from(sub.children).find(e => e.tagName === 'SynthEngine');
-        const entry = engine && Array.from(engine.children).find(e => e.tagName === 'ENTRYDESCR');
-        const found = name(entry?.getAttribute('name') ?? null); if (found) names.push(found);
+      let parts = 0;
+      for (const sub of Array.from(root.children).filter(e => e.tagName === 'SynthSubEngine')) {
+        for (const engine of Array.from(sub.children).filter(e => e.tagName === 'SynthEngine')) {
+          if (++parts > 8) break;
+          // Actual Omnisphere 3 host state nests patch metadata in SYNTHENG.
+          // Older authored multis may put the same metadata on SYNTHENG itself.
+          // Never search descendants: layer/soundsource names are not patch names.
+          const synth = Array.from(engine.children).filter(e => e.tagName === 'SYNTHENG');
+          if (synth.length > 1) continue;
+          const scope = synth[0] ?? engine;
+          const entries = Array.from(scope.children).filter(e => e.tagName === 'ENTRYDESCR');
+          if (entries.length > 1) continue;
+          const found = name(entries[0]?.getAttribute('name') ?? (synth[0]?.getAttribute('name') ?? null));
+          if (found) names.push(found);
+        }
+        if (parts >= 8) break;
       }
     } else if (isRmx) {
       for (const el of Array.from(root.getElementsByTagName('*'))) {

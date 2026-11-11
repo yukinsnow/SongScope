@@ -78,6 +78,8 @@ app.whenReady().then(async () => {
         assert.equal(piano.notes.length, 4);
         assert.match(piano.notes[0].label + piano.notes[0].title, /C4/);
         assert(piano.ruler?.trim().length, 'piano beat/bar ruler is visible');
+        // ResizeObserver updates label density after the inspector first mounts.
+        await until(win, "['3','4'].every(label=>[...document.querySelectorAll('.pianoRuler span')].some(e=>e.textContent===label))", 'responsive ruler layout');
         const initialView=await win.webContents.executeJavaScript(`(()=>{const view=document.querySelector('.pianoRollViewport').getBoundingClientRect(),note=document.querySelector('.pianoNote').getBoundingClientRect();return {note:note.toJSON(),view:view.toJSON(),marks:[...document.querySelectorAll('.pianoRuler span')].map(e=>({text:e.textContent,left:parseFloat(e.style.left)}))}})()`);
         assert(initialView.note.bottom>initialView.view.top+25&&initialView.note.top<initialView.view.bottom,'initial piano viewport shows a note, not just an empty midpoint');
         assert.equal(initialView.marks[0].text,'2.2','partial-bar clip starts with its true arrangement beat');

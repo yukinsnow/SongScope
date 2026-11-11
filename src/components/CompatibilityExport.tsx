@@ -10,7 +10,7 @@ export default function CompatibilityExport({ song, busy, onExport }: {
   busy: boolean;
   onExport: (target: CompatibilityTarget) => Promise<void>;
 }) {
-  const [target, setTarget] = useState<CompatibilityTarget>(song.projectVersion.softwareVersion?.startsWith('7.') ? 6 : 7);
+  const [target, setTarget] = useState<CompatibilityTarget>(song.projectVersion.softwareVersion?.startsWith('6.') ? 5 : song.projectVersion.softwareVersion?.startsWith('7.') ? 6 : 7);
   const [expanded, setExpanded] = useState(false);
   const [plan, setPlan] = useState<{ song: S1Song; target: CompatibilityTarget; result: Plan } | null>(null);
   const [error, setError] = useState('');
@@ -35,6 +35,7 @@ export default function CompatibilityExport({ song, busy, onExport }: {
       <label>{tr('目标版本')} <select aria-label={tr('目标版本')} value={target} disabled={busy} onChange={e => { setPlan(null); setTarget(Number(e.target.value) as CompatibilityTarget); }}>
         <option value={7}>Studio One 7</option>
         <option value={6}>Studio One 6</option>
+        <option value={5}>Studio One 5</option>
       </select></label>
       {error ? <p className="compatibilityBlocker" role="alert">{tr('兼容性检查失败：')}{error}</p> : !current ? <p role="status">{tr('正在检查兼容性…')}</p> : <>
         {current.changes.length > 0 && <div><h3>{tr('将转换')}</h3><ul className="compatibilityChanges">{current.changes.map((s, i) => <li key={i}>{s}</li>)}</ul></div>}

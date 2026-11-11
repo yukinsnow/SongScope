@@ -103,6 +103,9 @@ app.whenReady().then(async () => {
         await win.webContents.executeJavaScript("(()=>{const select=document.querySelector('.compatibilityExport select');select.value='6';select.dispatchEvent(new Event('change',{bubbles:true}));})()");
         await until(win, "document.querySelector('.compatibilityExport select').value==='6'&&!document.querySelector('.compatibilityDownload').disabled", 'target 6 export allowed');
         const six = await exported(win, 1, 7, 6);
+        await win.webContents.executeJavaScript("(()=>{const select=document.querySelector('.compatibilityExport select');select.value='5';select.dispatchEvent(new Event('change',{bubbles:true}));})()");
+        await until(win, "document.querySelector('.compatibilityExport select').value==='5'&&!document.querySelector('.compatibilityDownload').disabled", 'target 5 export allowed');
+        const five = await exported(win, 2, 6, 5);
         await win.webContents.executeJavaScript("document.querySelector('.compatibilityExport').scrollIntoView({block:'center'})");
         await pause(200); // Let the compositor display the scrolled export panel before capture.
         const layout = await win.webContents.executeJavaScript('({page:document.documentElement.scrollWidth,viewport:innerWidth})');
@@ -147,11 +150,11 @@ app.whenReady().then(async () => {
         });
         assert.deepEqual(submitted, [], 'project import/export makes no remote requests');
         if (!process.env.WEB_URL) assert.deepEqual(network, [], 'offline UI processing has no network requests');
-        console.log(JSON.stringify({ locale, width, seven: seven.name, six: six.name, unchanged: seven.unchanged, inputStillSame: seven.inputStillSame && six.inputStillSame, sameVersionReloadBlocked: true, unknownBlocked: true, layout, network: network.length }));
+        console.log(JSON.stringify({ locale, width, seven: seven.name, six: six.name, five: five.name, unchanged: seven.unchanged, inputStillSame: seven.inputStillSame && six.inputStillSame && five.inputStillSame, sameVersionReloadBlocked: true, unknownBlocked: true, layout, network: network.length }));
         win.destroy();
       }
     }
-    console.log('PASS: bilingual mobile/desktop product naming, saved/format version distinction, actual UI 7/6 compatibility downloads, original generator/data preservation and unknown-source blocker');
+    console.log('PASS: bilingual mobile/desktop product naming, saved/format version distinction, actual UI 7/6/5 compatibility downloads, original generator/data preservation and unknown-source blocker');
     app.quit();
   } catch (error) { console.error(error.stack || error); app.exit(1); }
 });

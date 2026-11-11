@@ -27,6 +27,26 @@ app.whenReady().then(async()=>{try{
   if(!(await round.file('metainfo.xml').async('text')).includes('Studio Pro/8.2.0.114903'))throw Error('Generator falsified');
   const blocks=[];
   for(const [name,song,target] of [['unknown',await fixture('Unknown/8.0.0','9'),7],['mismatch',await fixture('Studio One/7.2.0','9'),6],['same',await fixture('Studio One/7.2.0','8'),7],['upgrade',await fixture('Studio One/6.2.0','7'),7],['future',await fixture('Studio Pro/9.0.0','10'),7]]){const r=await analyze(song,target);if(r.canExport)throw Error('failed to block '+name);blocks.push(name);}
+  const matrix=[];
+  for(const sourceMajor of [8,7,6])for(const target of [7,6,5]){
+   const input=await fixture('Studio One/'+sourceMajor+'.2.0',String(sourceMajor+1)),r=await analyze(input,target);
+   if(r.canExport!==(target<sourceMajor))throw Error('downward matrix '+sourceMajor+'->'+target);
+   if(r.canExport){const output=await convert(input,target),z=await JSZip.loadAsync(output.data),text=await z.file('metainfo.xml').async('text');if(!text.includes('value="'+(target+1)+'"')||!text.includes('Studio One/'+sourceMajor+'.2.0'))throw Error('matrix output metadata');matrix.push(sourceMajor+'->'+target);}
+  }
+  const blockers5=[];
+  if((await analyze(await withEq(),5)).canExport)throw Error('new JSON EQ accepted5');blockers5.push('new JSON EQ');
+  const legacyEq=await fixture('Studio One/6.2.0','7');legacyEq.zip.file('Presets/EQ.fxpreset','<AudioEffectPreset cid="{073C4094-E062-4FB5-8328-74608DD1A3A4}"><Attributes x:id="ParameterData" lfgain="0" gain="1"/></AudioEffectPreset>');
+  if(!(await analyze(legacyEq,5)).canExport)throw Error('shared old EQ ID alone misclassified as EQ3');
+  legacyEq.zip.file('Presets/EQ.fxpreset','<AudioEffectPreset cid="{073C4094-E062-4FB5-8328-74608DD1A3A4}"><Attributes x:id="ParameterData" lfdynamic="0"/></AudioEffectPreset>');
+  if((await analyze(legacyEq,5)).canExport)throw Error('EQ3 schema accepted5');blockers5.push('EQ dynamic schema');
+  for(const name of ['De-esser','Vocoder','Lead Architect','Surround Delay','Surround Chorus','Open Air2']){
+   const native=await fixture();native.zip.file('Devices/native.xml','<Devices><Attributes x:id="classInfo" name="'+name+'" classID="{SYNTHETIC-CLASS}" subCategory="(Native)/FX"/></Devices>');
+   if((await analyze(native,5)).canExport)throw Error('new native accepted5 '+name);blockers5.push(name);
+   const named=await fixture();named.zip.file('Devices/native.xml','<Devices name="'+name+'"><Attributes x:id="classInfo" name="'+name+'" classID="{VST-EXAMPLE}" subCategory="VST3/FX"/></Devices>');
+   if(!(await analyze(named,5)).canExport)throw Error('VST namesake falsely blocked5 '+name);
+  }
+  const clap5=await fixture();clap5.zip.file('Devices/clap.xml','<Plugin pluginFormat="CLAP"/>');if((await analyze(clap5,5)).canExport)throw Error('CLAP allowed5');blockers5.push('CLAP');
+  if((await analyze(await fixture(),4)).canExport)throw Error('invalid target accepted');
   const strange=await fixture();strange.zip.file('plugin.dsppreset','{"classname":"New FX","parameters":{}}');if((await analyze(strange,7)).canExport)throw Error('unknown dsppreset allowed');blocks.push('unknown DSP');
   const compressor=await fixture();compressor.zip.file('Devices/audiomixer.xml','<Mixer cid="{36F3F4D1-CBB4-4BF7-A7E3-EBCCED53718B}"/>');if((await analyze(compressor,7)).canExport)throw Error('new compressor allowed');blocks.push('new Compressor');
   const clash=await fixture();clash.zip.file('METAINFO.xml',meta());if((await analyze(clash,7)).canExport)throw Error('case collision');blocks.push('case collision');
@@ -34,7 +54,7 @@ app.whenReady().then(async()=>{try{
   const duplicate=await fixture();duplicate.zip.file('metainfo.xml',meta().replace('</MetaInformation>','<Attribute id="Document:FormatVersion" value="9"/></MetaInformation>'));if((await analyze(duplicate,7)).canExport)throw Error('duplicate format allowed');blocks.push('duplicate format');
   const ghostOnly=await fixture();ghostOnly.zip.file('Devices/audiomixer.xml','<Mixer><Attributes x:id="ghostData" presetType="dsppreset"><Attributes x:id="classInfo" classID="{UNKNOWN}"/></Attributes></Mixer>');if((await analyze(ghostOnly,7)).canExport)throw Error('unresolved ghost accepted');blocks.push('unresolved DSP ghost');
   const bad=await fixture();bad.zip.file('metainfo.xml','<broken>');if((await analyze(bad,7)).canExport)throw Error('broken meta allowed');blocks.push('malformed metadata');
-  return {blocks,negativeEq,output:out.fileName,changed:out.report.changedEntries,warnings:out.report.warnings.length};
+  return {blocks,negativeEq,matrix,blockers5,output:out.fileName,changed:out.report.changedEntries,warnings:out.report.warnings.length};
  })()`);
  assert(result.blocks.length>=10);assert.equal(result.warnings,5);console.log('PASS synthetic source/version/format guards: '+JSON.stringify(result));
  const real=['/tmp/s1real/song.zip',...(fs.existsSync('/home/ubuntu/.openclaw/media/inbound')?fs.readdirSync('/home/ubuntu/.openclaw/media/inbound'):[]).filter(n=>n.includes('5a018938')).map(n=>path.join('/home/ubuntu/.openclaw/media/inbound',n))].filter(n=>fs.existsSync(n));
@@ -45,6 +65,7 @@ app.whenReady().then(async()=>{try{
    const source=await JSZip.loadAsync(Uint8Array.from(atob('${b64}'),c=>c.charCodeAt(0))),song={zip:source,fileName:'private.song'};
    const originals=new Map();for(const e of Object.values(source.files).filter(e=>!e.dir))originals.set(e.name,await e.async('uint8array'));
    const reports=[];
+   const five=await analyze(song,5);if(five.canExport||!five.blockers.some(x=>/Pro EQ/.test(x)))throw Error('real new EQ must block5');reports.push({target:5,blocked:true,blockers:five.blockers});
    for(const target of [7,6]){
     const plan=await analyze(song,target);if(!plan.canExport)throw Error(JSON.stringify(plan));
     const a=await convert(song,target),b=await convert(song,target),out=await JSZip.loadAsync(a.data),again=await JSZip.loadAsync(b.data);
@@ -74,7 +95,7 @@ app.whenReady().then(async()=>{try{
    }
    return reports;
   })()`);
-  if(p.includes('/tmp/s1real')){assert.equal(checked[0].audio,783);assert.equal(checked[0].midi,70);}
+  if(p.includes('/tmp/s1real')){assert.equal(checked[1].audio,783);assert.equal(checked[1].midi,70);}
   console.log('PASS real local archive '+path.basename(p)+': '+JSON.stringify(checked));
  }
  console.log('Compatibility export checks PASS; no target DAW opening/playback has been tested.');app.quit();

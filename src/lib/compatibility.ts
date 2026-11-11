@@ -5,7 +5,7 @@ import { parseXml } from './xml';
 import { readProjectVersion } from './project-version';
 
 /** Native archive compatibility is experimental, not a vendor-supported save-as. */
-export type CompatibilityTarget = 6 | 7;
+export type CompatibilityTarget = 5 | 6 | 7;
 export interface CompatibilityReport {
   canExport: boolean;
   blockers: string[];
@@ -104,7 +104,8 @@ async function prepare(song: S1Song, target: CompatibilityTarget): Promise<Prepa
   const replacements = new Map<string, Uint8Array>(), renames = new Map<string, string>();
   const result = { report, replacements, renames };
   const block = (message: string) => { if (!report.blockers.includes(message)) report.blockers.push(message); };
-  if (target !== 6 && target !== 7) { block(tr('仅支持导出到 Studio One 6 或 7。')); return result; }
+  if (![5, 6, 7].includes(target)) { block(tr('仅支持导出到 Studio One 5、6 或 7。')); return result; }
+  if (target === 5) report.warnings.push(tr('Studio One 5 目标不会转换歌词轨、视频轨、空间音频等新版功能；已知不兼容的原生插件会阻止导出。'));
   const files = Object.values(song.zip.files).filter(f => !f.dir);
   const names = new Set<string>();
   for (const f of files) { const lower = f.name.toLowerCase(); if (names.has(lower)) block(tr('文件路径存在大小写冲突，无法安全转换。')); names.add(lower); }
@@ -119,7 +120,7 @@ async function prepare(song: S1Song, target: CompatibilityTarget): Promise<Prepa
     const saved = value(generator[0], 'value') ?? '';
     const version = readProjectVersion({ 'Document:Generator': saved, 'Document:FormatVersion': value(format[0], 'value') ?? '' });
     const major = version.softwareVersion?.split('.')[0];
-    if (!version.softwareName || !['7', '8'].includes(major ?? '')) { block(tr('只支持保存于 Studio One 7 / Fender Studio Pro 8 的已识别工程格式。')); return result; }
+    if (!version.softwareName || !['6', '7', '8'].includes(major ?? '')) { block(tr('只支持保存于 Studio One 6 / 7 / Fender Studio Pro 8 的已识别工程格式。')); return result; }
     source = Number(major);
     if (value(format[0], 'value')?.trim() !== String(source + 1)) { block(tr('源软件版本与工程格式号不一致，无法安全转换。')); return result; }
     if (target >= source) { block(tr('目标版本必须低于工程保存版本。')); return result; }
@@ -131,6 +132,12 @@ async function prepare(song: S1Song, target: CompatibilityTarget): Promise<Prepa
     if ((f as unknown as { _data?: { uncompressedSize?: number } })._data?.uncompressedSize! > MAX_PRESET) { block(tr('未知或不支持的原生插件状态：') + f.name); continue; }
     const text = await f.async('text');
     try {
+      if (target === 5) {
+        // The accepted JSON EQ format is newer than EQ². Do not assume that
+        // the 6/7 legacy serializer also establishes an EQ³ -> EQ² mapping.
+        const state = JSON.parse(text.replace(/^\uFEFF/, ''));
+        if (state?.classname === 'Pro EQ') { block(tr('新版 Pro EQ 到 Studio One 5 的转换尚未验证，未导出。') + ' ' + f.name); continue; }
+      }
       const converted = convertEq(text), next = f.name.replace(/\.dsppreset$/i, '.fxpreset');
       if (names.has(next.toLowerCase())) throw Error('output preset collision');
       replacements.set(f.name, encoder.encode(converted)); renames.set(f.name, next);
@@ -139,14 +146,27 @@ async function prepare(song: S1Song, target: CompatibilityTarget): Promise<Prepa
     } catch { block(tr(text.includes('Pro EQ') ? 'Pro EQ 状态不符合已验证转换范围：' : '未知或不支持的原生插件状态：') + f.name); }
   }
   const allowedIds = new Set<Attribute>();
-  for (const f of files.filter(f => /\.xml$/i.test(f.name) && f.name !== meta.name)) {
+  for (const f of files.filter(f => (/\.xml$/i.test(f.name) || (target === 5 && /\.(?:fxpreset|synthpreset)$/i.test(f.name))) && f.name !== meta.name)) {
     try {
       const text = await f.async('text');
       const clap = /\b(?:format|pluginFormat|type)\s*=\s*["']CLAP["']/i.test(text);
-      if (!new RegExp(EQ_NEW + '|' + COMP_NEW, 'i').test(text) && !/\.dsppreset|presetType\s*=\s*["']dsppreset["']/i.test(text) && !clap) continue;
+      const olderNativeCheck = target === 5 && (text.toUpperCase().includes(EQ_OLD) || (/^Devices\//i.test(f.name) && /\b(?:x:)?id\s*=\s*["']classInfo["']/i.test(text)));
+      if (!new RegExp(EQ_NEW + '|' + COMP_NEW, 'i').test(text) && !/\.dsppreset|presetType\s*=\s*["']dsppreset["']/i.test(text) && !clap && !olderNativeCheck) continue;
       const tokens = tags(text), edits: Edit[] = [];
       if (tokens.some(t => ['uid', 'classID', 'cid'].some(k => value(t, k)?.replace(/[{}]/g, '').toUpperCase() === COMP_NEW))) block(tr('检测到未支持的新版压缩器，未导出以避免丢失插件。'));
-      if (target === 6 && tokens.some(t => ['format', 'pluginFormat', 'type'].some(k => value(t, k)?.toUpperCase() === 'CLAP'))) block(tr('检测到 CLAP 插件；Studio One 6 不支持该插件格式。'));
+      if (target < 7 && tokens.some(t => ['format', 'pluginFormat', 'type'].some(k => value(t, k)?.toUpperCase() === 'CLAP'))) block(tr('检测到 CLAP 插件；Studio One 5 / 6 不支持该插件格式。'));
+      if (target === 5) {
+        // classInfo is the saved factory identity, not a user-renamable track
+        // label. Require the native category to avoid namesake VST plugins.
+        const newerNative = tokens.filter(t => id(t) === 'classInfo' && /^\(Native\)(?:\/|$)/i.test(value(t, 'subCategory') ?? '') && /^(?:De[- ]?esser|Vocoder|Lead Architect|Surround (?:Delay|Chorus)|Open ?Air(?:²|2))$/i.test(value(t, 'name') ?? ''));
+        for (const device of newerNative) block(tr('Studio One 5 不支持此新版原生插件：') + value(device, 'name'));
+        const newEq = tokens.some(t => ['uid', 'classID', 'cid'].some(k => value(t, k)?.replace(/[{}]/g, '').toUpperCase() === EQ_NEW));
+        const legacyEq = tokens.some(t => ['uid', 'classID', 'cid'].some(k => value(t, k)?.replace(/[{}]/g, '').toUpperCase() === EQ_OLD));
+        // EQ² and EQ³ may share their legacy class ID. The ID alone is not
+        // evidence of EQ³; only explicit dynamic-parameter schema markers are.
+        const dynamicEq = legacyEq && tokens.some(t => [...t.attrs.keys()].some(k => /^(?:lf|lmf|mf|hmf|hf)dynamic$/.test(k)));
+        if (newEq || dynamicEq) block(tr('新版 Pro EQ 到 Studio One 5 的转换尚未验证，未导出。') + ' ' + f.name);
+      }
       for (const preset of tokens.filter(t => t.name === 'String' && id(t) === 'presetPath')) {
         const path = value(preset, 'text') ?? '', eq = eqEntries.get(path);
         if (!eq) { if (/\.dsppreset$/i.test(path)) block(tr('未知或不支持的原生插件状态：') + path); continue; }
@@ -162,7 +182,7 @@ async function prepare(song: S1Song, target: CompatibilityTarget): Promise<Prepa
         edits.push(...changes); allowedIds.add(device[0].attrs.get('uid')!); allowedIds.add(cls[0].attrs.get('classID')!); eq.references++;
       }
       for (const ghost of tokens.filter(t => id(t) === 'ghostData' && value(t, 'presetType') === 'dsppreset')) if (!edits.some(e => e.start === ghost.attrs.get('presetType')?.start)) block(tr('未知或不支持的原生插件状态：') + f.name);
-      for (const token of tokens) for (const attr of token.attrs.values()) if (attr.value.toUpperCase().includes(EQ_NEW) && !allowedIds.has(attr)) throw Error('unmapped EQ class identity');
+      if (target !== 5) for (const token of tokens) for (const attr of token.attrs.values()) if (attr.value.toUpperCase().includes(EQ_NEW) && !allowedIds.has(attr)) throw Error('unmapped EQ class identity');
       if (edits.length) replacements.set(f.name, encoder.encode(apply(text, edits)));
     } catch { block(tr('工程 XML 不符合可安全转换的结构：') + f.name); }
   }

@@ -78,6 +78,8 @@ export interface PluginRef {
   presetEncrypted?: boolean;
   /** Set only when the validated Kontakt state contains no loaded instruments. */
   presetEmpty?: boolean;
+  /** Archived instrument state attached to a track already rendered to audio. */
+  savedBeforeTransform?: boolean;
 }
 
 export interface TempoChange { beat: number; bpm: number; curveType: number; raw: Record<string,string> }
