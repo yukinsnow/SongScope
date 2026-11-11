@@ -221,3 +221,9 @@ SONG=/path/to/example.song xvfb-run -a node_modules/.bin/electron --no-sandbox s
 ---
 
 非 PreSonus / Fender 官方产品，与相关商标所有者无关联。
+
+## License / 许可证
+
+SongScope source code is licensed under the [MIT License](LICENSE). Third-party dependencies retain their own licenses. Demo music and example project content are provided for in-app viewing only; the MIT license does not grant rights to redistribute that musical content.
+
+SongScope 源代码采用 MIT 许可证；第三方依赖遵循各自许可。示例音乐及示例工程内容仅供应用内查看，不属于 MIT 授权的音乐内容再分发范围。
