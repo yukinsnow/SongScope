@@ -6,13 +6,13 @@
 
 SongScope 是一个只读歌曲浏览器：不需要安装工程里的 VST 插件，也能查看工程结构、音符片段和插件名称。支持 Windows / macOS / Linux 桌面构建，以及手机与平板上的浏览器 / PWA。
 
-> 当前为私有预览项目。GitHub 仓库与 Release 保持私有。网页版可通过链接访问，工程文件仅在使用者本地解析，不会上传到服务器。
+> 当前为私有预览项目。GitHub 仓库与 Release 保持私有。网页版可通过链接访问，使用者打开的工程文件仅在本地解析，不会上传到服务器。
 
 ## 语言、隐私与免责
 
 界面按系统 / 浏览器首选语言自动选择：中文环境显示中文，其他环境显示英文。工程名称、音轨名称、预设及素材路径不会被翻译。
 
-工程文件及其中的数据均在设备本地离线处理，**不会以任何形式上传**；不收集工程内容或素材路径。首次访问和更新网页仅下载应用资源。网页离线可用性取决于浏览器保留缓存，工程不会自动持久化。
+你打开的工程文件及其中的数据均在设备本地离线处理，**不会以任何形式上传**；不收集工程内容或素材路径。首次访问和更新网页仅下载应用资源。网页离线可用性取决于浏览器保留缓存，工程不会自动持久化。
 
 这是非官方工程查看与兼容副本导出工具，与 PreSonus / Fender 无关联。解析或转换结果可能不完整或有误，请以原软件为准，并保留工程备份。素材路径只是保存的引用，不代表当前文件存在；缺少路径会明确提示。MIDI 导出功能保留，但不提供音频导出。
 
@@ -23,6 +23,12 @@ SongScope 是一个只读歌曲浏览器：不需要安装工程里的 VST 插�
 - 桌面下载：本仓库的 [Releases](../../releases)，需要具有仓库访问权限。
 
 ## 功能
+
+### 首页示例工程
+
+首页提供 **「夏夜绮想演示用」** 示例，点击即可浏览歌曲信息、编排、钢琴窗与通道 / 插件，无需选择本地文件。示例使用从授权工程提取、清理后的展示数据，不分发原始 `.song`、插件状态或外部音频；素材只保留文件名，不公开本机路径。
+
+示例是**仅供浏览的只读模式，所有 MIDI 导出和低版本工程导出均禁用**。打开自己的 `.song` 后，正常导出功能恢复。
 
 ### 歌曲首页
 
@@ -59,16 +65,16 @@ SongScope 是一个只读歌曲浏览器：不需要安装工程里的 VST 插�
 ### MIDI 导出
 
 - 选择一个或多个 MIDI 块导出为标准 `.mid`。
-- 导出整轨或全部片段时保留编排位置；单片段导出时以片段起点归零，多片段导出保留编排位置。速度 / 拍号节点同时写入 MIDI conductor track；单片段会从所在位置的有效速度 / 拍号开始。
+- 导出全部编排时保留片段位置；单片段导出时以片段起点归零，多片段导出保留编排位置。速度 / 拍号节点同时写入 MIDI conductor track；单片段会从所在位置的有效速度 / 拍号开始。
 - 桌面版使用文件保存对话框；手机优先使用系统分享面板，不支持时下载文件。
 - **产品不提供 MIDI 导入和工程编辑入口，也不覆盖原工程。** `src/lib/midi.ts` 中保留了早期格式研究使用的写入辅助函数，不属于当前产品功能。
 
 ## 使用
 
-1. 打开网页或桌面应用，选择 `.song` 文件；桌面浏览器也支持拖放。
+1. 打开网页或桌面应用，可先点首页「查看示例工程」浏览；也可选择自己的 `.song` 文件，桌面浏览器支持拖放。
 2. 在歌曲首页查看封面与信息，切换「编排 / 走带」查看 MIDI 布局。
 3. 点击左侧轨道，在下方通道区查看相应插件。
-4. 选择片段后导出 MIDI，或导出整个轨道 / 全部编排。
+4. 在自己打开的工程中选择片段后导出 MIDI，或导出全部编排；首页示例不允许导出。
 
 手机可通过浏览器菜单「添加到主屏幕」安装为 PWA。初次加载后可缓存应用资源；离线使用取决于浏览器是否保留缓存，并非自动保存已打开的工程。
 
@@ -96,12 +102,12 @@ npm start         # 构建并启动 Electron
 ## 桌面打包
 
 ```bash
-npm run dist:win    # Windows NSIS；建议在 Windows 构建
-npm run dist:mac    # macOS DMG；必须在 macOS 构建
-npm run dist:linux  # Linux AppImage / deb
+npm run dist:win    # Windows x64 ZIP；建议在 Windows 构建
+npm run dist:mac    # macOS Intel / Apple Silicon DMG；必须在 macOS 构建
+npm run dist:linux  # Linux x64 / ARM64 AppImage
 ```
 
-产物在 `release/`。跨平台 CI 见 [build.yml](.github/workflows/build.yml)。发布标签后，工作流会把各平台产物附加到私有 Release；不会把仓库改为公开。
+产物在 `release/`，共 5 份桌面文件：Windows x64 ZIP、Linux x64 / ARM64 AppImage、macOS x64 / ARM64 DMG。跨平台 CI 见 [build.yml](.github/workflows/build.yml)。发布标签后，工作流会把各平台产物附加到私有 Release；不会把仓库改为公开。
 
 ## 快捷键
 
@@ -156,7 +162,8 @@ Github@Yukinsnow · Bilibili@純白
 | `src/lib/presets.ts` | 插件状态的预设名与音色文件引用 |
 | `src/lib/midi.ts` | 标准 MIDI 导出及早期格式研究辅助函数 |
 | `electron/` | 桌面窗口与文件读写桥接 |
-| `public/` | PWA、现用图标、简约图标候选及预览页 |
+| `src/lib/demo.ts`、`src/data/` | 只读示例加载器、展示数据与封面 |
+| `public/` | PWA、现用图标及预览页 |
 | `build/` | 平台图标 PNG / ICO / ICNS |
 | `scripts/` | 合成测试工程、验证与截图辅助脚本 |
 | `fixtures/smoke.song` | 合成测试工程，不含真实用户歌曲 |
@@ -165,6 +172,7 @@ Github@Yukinsnow · Bilibili@純白
 
 ```bash
 npm run build
+xvfb-run -a npx electron --no-sandbox scripts/test-demo.cjs
 xvfb-run -a npx electron --no-sandbox scripts/test-timing-shortcuts.cjs
 xvfb-run -a npx electron --no-sandbox scripts/test-presets.cjs
 xvfb-run -a npx electron --no-sandbox scripts/test-audio-events.cjs
@@ -176,7 +184,7 @@ node scripts/test-kontakt.cjs
 合成回归覆盖 120→80→150→100 BPM、4/4→3/4→7/8→5/4、单片段归零、MIDI 元事件重读、F1/F2/F3、输入框与连发保护，以及 Serum/Kontakt/通用预设元数据、UTF-16 引用、损坏和未知状态。CI 在 Linux 构建前运行这些验证。
 
 
-在获得授权的本地真实工程上验证了：44 条非文件夹轨道、70 个 MIDI 块；全部导出后重读为 5927 个音符。测试歌曲不随项目或网页分发。
+在获得授权的本地真实工程上验证了：44 条非文件夹轨道、70 个 MIDI 块；全部导出后重读为 5927 个音符。上述私有测试歌曲原文件不随项目或网页分发；首页只提供另外授权的「夏夜绮想演示用」经过清理的展示数据。
 
 ```bash
 # 默认使用 /tmp/s1real/song.zip；可用 SONG 指定本地样本

@@ -8,13 +8,19 @@ Explore Studio One / Fender Studio Pro projects, tracks, MIDI, plugins and saved
 
 ## Privacy & disclaimer
 
-Project files and their data are processed offline on your device. They are **never uploaded in any form**. SongScope does not collect project contents or media paths, run plugins, or access referenced external audio. Initial website visits and app updates download application assets; offline availability depends on the browser retaining its cache. Open projects are not automatically saved to browser storage.
+Projects you open and their data are processed offline on your device. They are **never uploaded in any form**. SongScope does not collect project contents or media paths, run plugins, or access referenced external audio. Initial website visits and app updates download application assets; offline availability depends on the browser retaining its cache. Open projects are not automatically saved to browser storage.
 
 This is an unofficial project viewer and compatibility-copy exporter, not affiliated with PreSonus / Fender or their trademark owners. Third-party project formats are reverse-adapted: results may be incomplete or inaccurate. Refer to the original application and keep backups. SongScope does not overwrite your project.
 
 ## Language
 
 The interface automatically uses Chinese when the system/browser's preferred language is Chinese (`zh-*`); otherwise it uses English. Project titles, track names, preset names and source paths remain unchanged.
+
+## Homepage example
+
+Select **View example project** on the homepage to explore **夏夜绮想演示用** without choosing a local file. The overview, arrangement, piano roll and channels/plugins use curated display data extracted from an authorized project. The original `.song`, plugin states and external audio are not distributed; media references retain filenames only, not local machine paths.
+
+The example is **view-only: all MIDI and older-version project exports are disabled**. Opening your own `.song` restores the normal export features.
 
 ## Features
 
@@ -40,9 +46,9 @@ See [conversion scope and evidence](docs/compatibility-export.md).
 
 ## Usage & shortcuts
 
-1. Open or drop a `.song` project.
+1. Select **View example project**, or open/drop your own `.song` project.
 2. Explore the overview, then switch to Arrangement.
-3. Select tracks to inspect plugins and audio references; select MIDI clips for export.
+3. Select tracks to inspect plugins and audio references. MIDI and compatibility exports are available for your own projects only, not the homepage example.
 4. Optionally install the PWA using your browser's Add to Home Screen command.
 
 | Key | Action |
@@ -74,15 +80,16 @@ npm run dist:mac
 npm run dist:linux
 ```
 
-Packages are written to `release/`. macOS builds require macOS. [GitHub Actions](.github/workflows/build.yml) builds Windows x64, Linux x64/ARM64 and macOS Intel/Apple Silicon; tagged builds attach artifacts to private Releases.
+Packages are written to `release/`: Windows x64 ZIP, Linux x64/ARM64 AppImage and macOS Intel/Apple Silicon DMG (five desktop files). The `dist:*` scripts use these same targets. macOS builds require macOS. [GitHub Actions](.github/workflows/build.yml) builds Windows x64, Linux x64/ARM64 and macOS Intel/Apple Silicon; tagged builds attach artifacts to private Releases.
 
 ```bash
+xvfb-run -a npx electron --no-sandbox scripts/test-demo.cjs
 xvfb-run -a npx electron --no-sandbox scripts/test-i18n-audio.cjs
 xvfb-run -a npx electron --no-sandbox scripts/test-timing-shortcuts.cjs
 xvfb-run -a npx electron --no-sandbox scripts/test-presets.cjs
 ```
 
-Tests cover bilingual UI, local-only project loading, audio references, MIDI exclusion, timing maps, MIDI round-trips, shortcuts and preset metadata. Real user projects are not distributed.
+Tests cover bilingual UI, local-only project loading, audio references, MIDI exclusion, timing maps, MIDI round-trips, shortcuts and preset metadata. Private test project originals are not distributed. The homepage example contains only curated display data from a separately authorized demonstration project.
 
 ## Deployment & source layout
 
@@ -91,6 +98,7 @@ Cloudflare Pages project `songscope-web` is connected directly to private reposi
 - `src/App.tsx`: viewer and MIDI export UI; `src/i18n.ts`: UI translations and locale detection.
 - `src/lib/song.ts`: ZIP/XML, media references and plugin routing.
 - `src/lib/musicx.ts`, `timing.ts`, `presets.ts`, `midi.ts`: note decoding, tempo/meter, saved presets and MIDI export.
+- `src/lib/demo.ts`, `src/data/`: preview-only example loader, display data and cover.
 - `electron/`: desktop file bridge; `public/`: PWA and branding; `build/`: platform icons.
 - `scripts/`, `fixtures/`: verification and synthetic samples.
 

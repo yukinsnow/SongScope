@@ -104,6 +104,7 @@ async function prepare(song: S1Song, target: CompatibilityTarget): Promise<Prepa
   const replacements = new Map<string, Uint8Array>(), renames = new Map<string, string>();
   const result = { report, replacements, renames };
   const block = (message: string) => { if (!report.blockers.includes(message)) report.blockers.push(message); };
+  if (song.readOnlyDemo) { block(tr('此示例仅供浏览，不支持 MIDI 或工程导出。')); return result; }
   if (![5, 6, 7].includes(target)) { block(tr('仅支持导出到 Studio One 5、6 或 7。')); return result; }
   if (target === 5) report.warnings.push(tr('Studio One 5 目标不会转换歌词轨、视频轨、空间音频等新版功能；已知不兼容的原生插件会阻止导出。'));
   const files = Object.values(song.zip.files).filter(f => !f.dir);

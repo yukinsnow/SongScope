@@ -1,6 +1,15 @@
 // UI strings only: never translate project content, plugin names or media paths.
 export const language = (navigator.languages?.[0] || navigator.language || 'en').toLowerCase().startsWith('zh') ? 'zh' : 'en';
 const english: Record<string,string> = {
+ "示例不公开素材路径": "Media paths are not included in the example",
+ "示例工程": "Example project",
+ "查看示例工程": "View example project",
+ "只读示例 · 不可导出": "Read-only example · Export disabled",
+ "此示例仅供浏览，不支持 MIDI 或工程导出。": "This example is for viewing only. MIDI and project exports are disabled.",
+ "正在加载示例…": "Loading example…",
+ "示例加载失败：": "Unable to load example: ",
+ "示例工程暂时无法打开，请重试。": "The example project could not be opened. Please try again.",
+ "返回首页": "Back to home",
  "仅生成实验性兼容副本，尚未在目标版本软件中验证打开与播放。": "Generates an experimental compatibility copy; opening and playback in the target DAW have not been verified.",
  "新版本专属功能、第三方插件和自动化不保证兼容，不会自动渲染或删除。": "Newer features, third-party plugins and automation may be incompatible; they are not automatically rendered or removed.",
  "保留外部音频引用，不会读取或打包工程外的音频文件。": "External audio references are retained; external audio is not accessed or packaged.",
@@ -43,7 +52,6 @@ const english: Record<string,string> = {
 
  "Studio One / Fender Studio Pro 工程查看器": "Studio One / Fender Studio Pro project viewer",
  "打开 Studio One / Fender Studio Pro 工程，浏览轨道、MIDI 与插件。": "Open a Studio One / Fender Studio Pro project to explore tracks, MIDI and plugins.",
- "Studio One 与 Fender Studio Pro 是同一软件产品线，统一支持 .song 工程。": "Studio One and Fender Studio Pro are the same product line, using .song projects.",
  "SongScope — Studio One / Fender Studio Pro 工程查看器": "SongScope — Studio One / Fender Studio Pro project viewer",
  "工程保存版本": "Saved with version",
  "工程格式版本": "Project format version",

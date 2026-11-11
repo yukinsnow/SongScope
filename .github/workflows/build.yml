@@ -18,17 +18,23 @@ jobs:
           - os: macos-latest
             target: --mac dmg --arm64 --x64
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+      - name: Verify release version
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: node -e 'if(process.env.GITHUB_REF_NAME !== "v"+require("./package.json").version) throw new Error("Release tag and package version must match")'
       - run: npm ci
       - run: npm run build
-      - name: Timing, shortcuts and preset regression checks
+      - name: Demo, timing, shortcuts and preset regression checks
         if: runner.os == 'Linux'
         run: |
+          xvfb-run -a npx electron --no-sandbox scripts/test-demo.cjs
           xvfb-run -a npx electron --no-sandbox scripts/test-project-version.cjs
           xvfb-run -a npx electron --no-sandbox scripts/test-compatibility.cjs
           xvfb-run -a npx electron --no-sandbox scripts/test-version-compatibility-ui.cjs

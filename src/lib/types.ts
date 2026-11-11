@@ -10,6 +10,8 @@ export type TrackType =
   | "unknown";
 
 export interface S1Part {
+  /** Display-only example content; never enable export. */
+  readOnlyDemo?: boolean;
   clipId: string | null;
   name: string;
   /** arrangement position, in beats */
@@ -44,6 +46,7 @@ export interface S1AudioEvent {
 }
 
 export interface S1Track {
+  readOnlyDemo?: boolean;
   id: string;
   name: string;
   type: TrackType;
@@ -96,6 +99,8 @@ export interface ProjectVersion {
 }
 
 export interface S1Song {
+  /** Bundled display-only example, without a source archive. */
+  readOnlyDemo?: boolean;
   fileName: string;
   zipEntries: string[];
   tracks: S1Track[];

@@ -39,6 +39,7 @@ export function partRelativeNotes(part: S1Part): NoteEvent[] {
 }
 
 export function exportPartsToMidi(refs: PartRef[], opts: ExportOptions = {}): Uint8Array {
+  if (refs.some(r => r.part.readOnlyDemo || r.track.readOnlyDemo)) throw new Error(tr("此示例仅供浏览，不支持 MIDI 或工程导出。"));
   const midi = new Midi();
   const ppq = midi.header.ppq || DEFAULT_PPQ;
   // Independent clips from different song positions cannot share conflicting conductor maps.
@@ -112,6 +113,7 @@ export async function importMidiInto(
   midiBytes: ArrayBuffer,
   opts: ImportOptions,
 ): Promise<ImportResult> {
+  if (song.readOnlyDemo) throw new Error(tr("此示例仅供浏览，不支持 MIDI 或工程导出。"));
   const warnings: string[] = [];
   const { notes, name, ppq } = midiNotesFromBytes(midiBytes);
   if (!notes.length) throw new Error(tr("这个 MIDI 文件里没有音符。"));
