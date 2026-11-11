@@ -9,6 +9,7 @@ import { extractSavedPreset } from "./preset-worker";
 import { readTimeMaps } from "./timing";
 import { decodeMusicx } from "./musicx";
 import { readAudioEvents } from "./audio";
+import { readProjectVersion } from "./project-version";
 
 const XML_ENTRIES = [
   "Song/song.xml",
@@ -50,7 +51,7 @@ export async function readSong(fileName: string, data: ArrayBuffer): Promise<S1S
 
   const metadata: Record<string, string> = {};
   for (const el of Array.from(xmlDocs["metainfo.xml"]?.getElementsByTagName("Attribute") ?? [])) {
-    const key = attr(el, "id");
+    const key = xid(el);
     if (key) metadata[key] = attr(el, "value") ?? "";
   }
   const artPath = metadata["Media:Artwork"] || entries.find(n => /(^|\/)artwork\.(png|jpe?g|webp)$/i.test(n));
@@ -230,6 +231,7 @@ export async function readSong(fileName: string, data: ArrayBuffer): Promise<S1S
     tempoMap, meterMap,
     songTitle: metadata["Document:Title"] || songTitle,
     metadata, artwork,
+    projectVersion: readProjectVersion(metadata),
     mediaPool,
     warnings,
     xmlDocs,

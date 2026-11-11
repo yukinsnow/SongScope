@@ -1,6 +1,47 @@
 // UI strings only: never translate project content, plugin names or media paths.
 export const language = (navigator.languages?.[0] || navigator.language || 'en').toLowerCase().startsWith('zh') ? 'zh' : 'en';
 const english: Record<string,string> = {
+ "仅生成实验性兼容副本，尚未在目标版本软件中验证打开与播放。": "Generates an experimental compatibility copy; opening and playback in the target DAW have not been verified.",
+ "新版本专属功能、第三方插件和自动化不保证兼容，不会自动渲染或删除。": "Newer features, third-party plugins and automation may be incompatible; they are not automatically rendered or removed.",
+ "保留外部音频引用，不会读取或打包工程外的音频文件。": "External audio references are retained; external audio is not accessed or packaged.",
+ "请将兼容副本放在原工程同一目录，以保留相对素材路径。": "Put the compatibility copy in the original project directory to preserve relative media paths.",
+ "保留原工程与保存软件版本记录。": "The original project and saved application-version record are preserved.",
+ "仅支持导出到 Studio One 6 或 7。": "Only Studio One 6 or 7 are supported as export targets.",
+ "文件路径存在大小写冲突，无法安全转换。": "File paths conflict by letter case; conversion is blocked.",
+ "工程版本信息缺失或重复，无法安全转换。": "Project version metadata is missing, malformed or duplicated; conversion is blocked.",
+ "只支持保存于 Studio One 7 / Fender Studio Pro 8 的已识别工程格式。": "Only recognized project formats saved by Studio One 7 / Fender Studio Pro 8 are supported.",
+ "源软件版本与工程格式号不一致，无法安全转换。": "Saved application version and project format do not match; conversion is blocked.",
+ "目标版本必须低于工程保存版本。": "The target version must be older than the saved application version.",
+ "调整工程格式号：": "Change project format number: ",
+ "未知或不支持的原生插件状态：": "Unknown or unsupported native plugin state: ",
+ "已转换 Pro EQ 预设及设备引用：": "Convert Pro EQ preset and device references: ",
+ "Pro EQ 状态不符合已验证转换范围：": "Pro EQ state is outside the supported conversion schema: ",
+ "检测到未支持的新版压缩器，未导出以避免丢失插件。": "Unsupported newer Compressor detected; export is blocked to avoid losing the plugin.",
+ "检测到 CLAP 插件；Studio One 6 不支持该插件格式。": "A CLAP plugin was detected; Studio One 6 does not support this plugin format.",
+ "工程 XML 不符合可安全转换的结构：": "Project XML is outside the supported conversion structure: ",
+ "Pro EQ 引用关系不明确，未导出。": "Pro EQ references are ambiguous; export is blocked.",
+ "导出已阻止：": "Export blocked: ",
+
+ "高版本转低版本": "Export for an older version",
+ "实验性兼容副本": "Experimental compatibility copy",
+ "导出新的 .song 副本，原工程保持不变。新版本独有功能不能保证在旧版保留；导出后请在目标软件中核对。": "Exports a new .song copy without changing the original. Newer features may not work in older versions; verify the result in the target application.",
+ "目标版本": "Target version",
+ "兼容性检查失败：": "Compatibility check failed: ",
+ "正在检查兼容性…": "Checking compatibility…",
+ "将转换": "Planned changes",
+ "兼容性说明": "Compatibility notes",
+ "当前无法转换": "Conversion unavailable",
+ "导出兼容 .song 副本": "Export compatible .song copy",
+ "正在生成兼容副本…": "Creating compatibility copy…",
+ "兼容副本已导出，请在目标软件中验证。": "Compatibility copy exported. Verify it in the target application.",
+ "本工具为非官方工程查看与兼容导出工具，与 PreSonus / Fender 无关联。解析与转换结果可能存在误差，请以原软件为准，并保留工程备份。": "An unofficial project viewer and compatibility export tool, not affiliated with PreSonus / Fender. Parsing and conversion may be inaccurate; refer to the original software and keep project backups.",
+
+ "Studio One / Fender Studio Pro 工程查看器": "Studio One / Fender Studio Pro project viewer",
+ "打开 Studio One / Fender Studio Pro 工程，浏览轨道、MIDI 与插件。": "Open a Studio One / Fender Studio Pro project to explore tracks, MIDI and plugins.",
+ "Studio One 与 Fender Studio Pro 是同一软件产品线，统一支持 .song 工程。": "Studio One and Fender Studio Pro are the same product line, using .song projects.",
+ "SongScope — Studio One / Fender Studio Pro 工程查看器": "SongScope — Studio One / Fender Studio Pro project viewer",
+ "工程保存版本": "Saved with version",
+ "工程格式版本": "Project format version",
  "曲线变速工程的秒制音频片段位置 / 长度当前按速度节点阶梯近似。": "Seconds-based audio positions / durations in tempo-curve projects currently use step approximation at tempo nodes.",
  "未加载音源": "No instrument loaded",
  "时间缩放": "Time zoom",
@@ -154,5 +195,5 @@ const english: Record<string,string> = {
 export function t(text: string): string { return language === 'zh' ? text : (english[text] ?? text); }
 if (typeof document !== 'undefined') {
  document.documentElement.lang = language === 'zh' ? 'zh-CN' : 'en';
- document.title = t('SongScope — Studio One 工程查看器');
+ document.title = t('SongScope — Studio One / Fender Studio Pro 工程查看器');
 }

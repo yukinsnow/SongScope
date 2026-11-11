@@ -1,7 +1,7 @@
 {
-  "name": "SongScope — Studio One 工程查看器",
+  "name": "SongScope — Studio One / Fender Studio Pro 工程查看器",
   "short_name": "SongScope",
-  "description": "Studio One 歌曲结构浏览与 MIDI 导出",
+  "description": "Studio One / Fender Studio Pro 歌曲结构浏览与 MIDI 导出",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#14161a",

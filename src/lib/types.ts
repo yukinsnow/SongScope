@@ -83,6 +83,16 @@ export interface PluginRef {
 export interface TempoChange { beat: number; bpm: number; curveType: number; raw: Record<string,string> }
 export interface MeterChange { beat: number; numerator: number; denominator: number }
 
+export interface ProjectVersion {
+  /** Canonical product family, independent of PreSonus/Fender branding. */
+  softwareName: string | null;
+  /** Exact numeric application version saved by the generating application. */
+  softwareVersion: string | null;
+  /** Internal document format version, not an application major version. */
+  formatVersion: string | null;
+  rawGenerator: string | null;
+}
+
 export interface S1Song {
   fileName: string;
   zipEntries: string[];
@@ -98,6 +108,7 @@ export interface S1Song {
   songTitle: string | null;
   artwork: string | null;
   metadata: Record<string, string>;
+  projectVersion: ProjectVersion;
   warnings: string[];
   xmlDocs: Record<string, Document>;
   zip: JSZip;

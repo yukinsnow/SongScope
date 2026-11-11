@@ -1,8 +1,8 @@
-# SongScope — Studio One Project Viewer
+# SongScope — Studio One / Fender Studio Pro Project Viewer
 
 [简体中文](README.md) | **English**
 
-Explore Studio One projects, tracks, MIDI, plugins and saved instrument presets without installing those plugins. Available on Windows, macOS, Linux and browser/PWA on mobile and desktop.
+Explore Studio One / Fender Studio Pro projects, tracks, MIDI, plugins and saved instrument presets without installing those plugins. Available on Windows, macOS, Linux and browser/PWA on mobile and desktop.
 
 **Web app:** https://songscope.response.run · **Downloads:** [private Releases](../../releases) (repository access required).
 
@@ -10,7 +10,7 @@ Explore Studio One projects, tracks, MIDI, plugins and saved instrument presets 
 
 Project files and their data are processed offline on your device. They are **never uploaded in any form**. SongScope does not collect project contents or media paths, run plugins, or access referenced external audio. Initial website visits and app updates download application assets; offline availability depends on the browser retaining its cache. Open projects are not automatically saved to browser storage.
 
-This is an unofficial, read-only viewer, not affiliated with PreSonus / Fender or their trademark owners. Third-party project formats are reverse-adapted: results may be incomplete or inaccurate. Refer to the original application and keep backups. SongScope does not overwrite your project.
+This is an unofficial project viewer and compatibility-copy exporter, not affiliated with PreSonus / Fender or their trademark owners. Third-party project formats are reverse-adapted: results may be incomplete or inaccurate. Refer to the original application and keep backups. SongScope does not overwrite your project.
 
 ## Language
 
@@ -18,7 +18,7 @@ The interface automatically uses Chinese when the system/browser's preferred lan
 
 ## Features
 
-- Song overview: artwork, title, artist, genre, creator, tempo, meter, key and producer application.
+- Song overview: artwork, title, artist, genre, creator, tempo, meter, key and producer application. Studio One / Fender Studio Pro share one product label; saved software version (including build) and document format number are shown separately. Unknown versions are not guessed.
 - Read-only arrangement with positioned MIDI and audio clips, zoom, scrolling and multi-selection.
 - Piano roll: labeled semitone keys, MIDI pitches (middle C = C4 / 60), bar/beat grid, note names and click-to-inspect pitch, duration, velocity and position. Independent zoom, scrolling and full 128-key range. Trimmed notes respect the part window.
 - Tempo and meter maps, change markers and bar lines that follow meter changes.
@@ -29,6 +29,14 @@ The interface automatically uses Chinese when the system/browser's preferred lan
 - Mobile MIDI exports use system sharing when supported, otherwise download. Desktop exports use a save dialog. Audio sources are never added to MIDI export.
 
 Preset coverage and evidence: [support matrix](docs/preset-support.md). Vital, Sylenth1, Omnisphere, StylusRMX and Falcon have readers for limited explicit formats, not all versions or real-host variants. Ten real Nexus instances remain unreadable.
+
+## Older-version compatibility copies (experimental)
+
+The overview has an **Export for an older version** panel targeting Studio One 7 / 6. It checks source versions and supported state before export, lists changes, limitations or blockers, and generates a separate `.song`. The original project and saved generator metadata stay unchanged.
+
+This is not a vendor-supported Save As and does not translate all new features. **Opening in the target DAW is not yet verified.** Existing embedded content and external source references are retained, not rendered or collected. Put the copy next to the original project and verify media, effects, routing and automation in the target application. Third-party plugin states remain unchanged; plugin version compatibility is not guaranteed.
+
+See [conversion scope and evidence](docs/compatibility-export.md).
 
 ## Usage & shortcuts
 
