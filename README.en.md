@@ -18,7 +18,9 @@ The interface automatically uses Chinese when the system/browser's preferred lan
 
 ## Homepage example
 
-Select **View example project** on the homepage to explore **夏夜绮想演示用** without choosing a local file. The overview, arrangement, piano roll and channels/plugins use curated display data extracted from an authorized project. The original `.song`, plugin states and external audio are not distributed; media references retain filenames only, not local machine paths.
+Select the smaller **Example project** button below **Open .song file** on the homepage to explore **夏夜绮想演示用** without choosing a local file. The overview, arrangement, piano roll and channels/plugins use curated display data extracted from an authorized project. The original `.song`, plugin states and external audio are not distributed; media references retain filenames only, not local machine paths.
+
+Each instrument keeps its parsed result: Piano shows **Encrypted instrument cannot be read**, while Violin shows the saved instrument name **Violin**. Unrecognized presets also have an explicit status.
 
 The example is **view-only: all MIDI and older-version project exports are disabled**. Opening your own `.song` restores the normal export features.
 
@@ -46,7 +48,7 @@ See [conversion scope and evidence](docs/compatibility-export.md).
 
 ## Usage & shortcuts
 
-1. Select **View example project**, or open/drop your own `.song` project.
+1. Select **Example project**, or open/drop your own `.song` project.
 2. Explore the overview, then switch to Arrangement.
 3. Select tracks to inspect plugins and audio references. MIDI and compatibility exports are available for your own projects only, not the homepage example.
 4. Optionally install the PWA using your browser's Add to Home Screen command.
@@ -90,6 +92,14 @@ xvfb-run -a npx electron --no-sandbox scripts/test-presets.cjs
 ```
 
 Tests cover bilingual UI, local-only project loading, audio references, MIDI exclusion, timing maps, MIDI round-trips, shortcuts and preset metadata. Private test project originals are not distributed. The homepage example contains only curated display data from a separately authorized demonstration project.
+
+To regenerate an authorized example, build first, run the snapshot tool with the real application/worker, then build again to include the new snapshot. Do not inject a standalone reader into `about:blank`: it cannot locate the Kontakt worker.
+
+```bash
+npm run build
+xvfb-run -a npx electron --no-sandbox scripts/make-demo.cjs /path/to/demo.song
+npm run build
+```
 
 ## Deployment & source layout
 

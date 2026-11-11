@@ -72,6 +72,14 @@ function checkSnapshot() {
     }
   }
   walk(snapshot, 'demo');
+  const kontaktTrack = name => snapshot.tracks.find(t => t.name === name)?.plugins.find(p => p.format === 'instrument' && /Kontakt/i.test(p.name));
+  const piano = kontaktTrack('Piano'), violin = kontaktTrack('Violin');
+  assert(piano, 'demo retains Piano Kontakt instrument');
+  assert.equal(piano.presetEncrypted, true, 'demo retains validated unreadable Piano state');
+  assert.deepEqual(piano.presetNames, [], 'encrypted Piano never invents an instrument name');
+  assert(violin, 'demo retains Violin Kontakt instrument');
+  assert.deepEqual(violin.presetNames, ['Violin'], 'demo retains the actual readable Violin instrument name');
+  assert(!violin.presetEncrypted, 'readable Violin is not marked unreadable');
   const publicFiles = [];
   function list(dir) {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -102,12 +110,23 @@ app.whenReady().then(async () => {
         });
         if (process.env.WEB_URL) await win.loadURL(process.env.WEB_URL);
         else await win.loadFile(path.join(root, 'dist/index.html'));
-        await until(win, "!!document.querySelector('.demoOpen')", 'homepage demo card');
+        await until(win, "!!document.querySelector('.demoOpen')", 'homepage example button');
         const homepage = await win.webContents.executeJavaScript('document.body.innerText');
-        assert.match(homepage, /夏夜绮想演示用/);
+        const homeActions = await win.webContents.executeJavaScript(`(()=>{
+          const primary=document.querySelector('.welcomeActions > button.primary'),example=document.querySelector('.welcomeActions > button.demoOpen');
+          const a=primary?.getBoundingClientRect(),b=example?.getBoundingClientRect();
+          return {text:example?.textContent.trim(),adjacent:primary?.nextElementSibling===example,card:!!document.querySelector('.demoCard'),title:!!document.querySelector('#demoTitle'),below:!!a&&!!b&&b.top>=a.bottom,widths:[a?.width,b?.width],heights:[a?.height,b?.height]};
+        })()`);
+        assert.equal(homeActions.text, zh ? '示例工程' : 'Example project');
+        assert.equal(homeActions.adjacent, true, 'example button immediately follows Open .song');
+        assert.equal(homeActions.below, true, 'example button is below Open .song');
+        assert.equal(homeActions.card, false, 'old example card is removed');
+        assert.equal(homeActions.title, false, 'homepage has no separate example title block');
+        assert(homeActions.widths[1] <= homeActions.widths[0], 'example is a compact secondary button');
+        assert(homeActions.heights[1] <= homeActions.heights[0], 'example is no taller than primary button');
         assert.doesNotMatch(homepage, /Studio One 与 Fender Studio Pro 是同一软件产品线|Studio One and Fender Studio Pro are the same product line/i);
         assert.equal(await win.webContents.executeJavaScript("document.querySelectorAll('.productAlias').length"), 0, 'removed description has no homepage element');
-        assert.match(homepage, zh ? /查看示例工程/ : /View (?:demo|example) project/);
+        assert.match(homepage, zh ? /示例工程/ : /Example project/);
         await capture(win, `demo-home-${locale}-${width}`);
         await win.webContents.executeJavaScript("window.__demoSaved=[];window.s1={saveFile:async payload=>{window.__demoSaved.push({name:payload.defaultName,bytes:Array.from(payload.data)});return payload.defaultName;}};void 0;");
         await openDemo(win);
@@ -126,6 +145,17 @@ app.whenReady().then(async () => {
         assert(arrangement.audio > 0, 'demo audio placement remains inspectable');
         assert.equal(arrangement.disabled[0], true, 'selected-MIDI export disabled');
         assert.equal(arrangement.disabled[2], true, 'all-MIDI export disabled');
+        const instrumentSubtitles = await win.webContents.executeJavaScript(`(()=>{
+          const result={};
+          for(const name of ['Piano','Violin','MelodyVerse']){
+            const header=[...document.querySelectorAll('.lane .trackHeader')].find(c=>c.querySelector('strong')?.textContent===name);
+            result[name]=header?.querySelector(':scope > div > small')?.textContent;
+          }
+          return result;
+        })()`);
+        assert.match(instrumentSubtitles.Piano, zh ? /Kontakt.*加密音源无法读取/ : /Kontakt.*Encrypted instrument cannot be read/);
+        assert.match(instrumentSubtitles.Violin, /Kontakt.*Violin/);
+        assert.match(instrumentSubtitles.MelodyVerse, zh ? /Nexus.*未识别/ : /Nexus.*Unrecognized/);
         await win.webContents.executeJavaScript("document.querySelector('.clip:not(.audioClip)').click()");
         await key(win, 'F2');
         await until(win, "!!document.querySelector('.inspectMeta button')&&document.querySelectorAll('.pianoNote').length>0", 'demo piano-roll inspector');
@@ -140,6 +170,32 @@ app.whenReady().then(async () => {
         await key(win, 'F3');
         await until(win, "document.querySelectorAll('.channel').length>0", 'demo plugin channels');
         assert.equal(await win.webContents.executeJavaScript("!!document.querySelector('.midiInspector')"), false, 'F3 still closes the MIDI inspector');
+        const kontakt = await win.webContents.executeJavaScript(`(()=>{
+          const channel=name=>[...document.querySelectorAll('.channel')].find(c=>c.querySelector('.channelTop strong')?.textContent===name);
+          const result={};
+          for(const name of ['Piano','Violin','MelodyVerse']){
+            const c=channel(name),badge=c?.querySelector('.presetBadge');
+            c?.scrollIntoView({block:'nearest',inline:'center'});
+            result[name]={instrument:c?.querySelector('.pluginGroup')?.textContent,badge:badge?.textContent,visible:!!badge,title:badge?.title};
+          }
+          return result;
+        })()`);
+        const sourceSnapshot = JSON.parse(fs.readFileSync(path.join(root,'src/data/demo-song.json'),'utf8'));
+        const violinNames = sourceSnapshot.tracks.find(t=>t.name==='Violin').plugins.find(p=>p.format==='instrument').presetNames;
+        assert.equal(kontakt.Piano.visible, true, 'unreadable Piano instrument always has a status badge');
+        assert.match(kontakt.Piano.instrument, /Kontakt/);
+        assert.match(kontakt.Piano.badge, zh ? /加密音源无法读取/ : /Encrypted instrument cannot be read/);
+        assert.equal(kontakt.Violin.visible, true, 'readable Violin instrument always has a preset badge');
+        assert.match(kontakt.Violin.instrument, /Kontakt/);
+        for(const name of violinNames)assert(kontakt.Violin.badge.includes(name),'Violin saved preset name is visible: '+name);
+        assert.doesNotMatch(kontakt.Violin.badge, /加密音源无法读取|Encrypted instrument cannot be read/);
+        assert.match(kontakt.Piano.title, zh ? /加密音源无法读取/ : /Encrypted instrument cannot be read/, 'unreadable Piano tooltip matches status');
+        for(const name of violinNames)assert(kontakt.Violin.title.includes(name),'Violin tooltip includes readable preset name');
+        assert.equal(kontakt.MelodyVerse.visible, true, 'unknown Nexus preset remains visible');
+        assert.match(kontakt.MelodyVerse.instrument, /Nexus/);
+        assert.match(kontakt.MelodyVerse.badge, zh ? /未识别/ : /Unrecognized/);
+        assert.match(kontakt.MelodyVerse.title, zh ? /预设未识别/ : /Preset unrecognized/);
+        await capture(win, `demo-kontakt-${locale}-${width}`);
         const layout = await win.webContents.executeJavaScript('({page:document.documentElement.scrollWidth,viewport:innerWidth})');
         assert(layout.page <= layout.viewport + 1, 'demo mobile page does not overflow horizontally');
         fs.mkdirSync(path.join(root, 'logs'), { recursive: true });
@@ -198,7 +254,7 @@ app.whenReady().then(async () => {
           const unexpected = network.filter(r => !['GET', 'HEAD'].includes(r.method) || r.hasUpload || new URL(r.url).origin !== origin);
           assert.deepEqual(unexpected, [], 'live demo fetches only same-origin app resources; unexpected network requests: ' + JSON.stringify(unexpected));
         }
-        console.log(JSON.stringify({ locale, width, snapshotBytes, overview, arrangement, library, reset, layout, normalExport: saved.name, network: network.length }));
+        console.log(JSON.stringify({ locale, width, snapshotBytes, homeActions, overview, arrangement, instrumentSubtitles, kontakt, library, reset, layout, normalExport: saved.name, network: network.length }));
         win.destroy();
       }
     }
