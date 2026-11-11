@@ -195,7 +195,8 @@ app.whenReady().then(async () => {
         if (!process.env.WEB_URL) assert.deepEqual(network, [], 'bundled demo works fully offline, including file:// asset loading');
         else {
           const origin = new URL(process.env.WEB_URL).origin;
-          assert(network.every(r => ['GET', 'HEAD'].includes(r.method) && !r.hasUpload && new URL(r.url).origin === origin), 'live demo fetches only same-origin app resources');
+          const unexpected = network.filter(r => !['GET', 'HEAD'].includes(r.method) || r.hasUpload || new URL(r.url).origin !== origin);
+          assert.deepEqual(unexpected, [], 'live demo fetches only same-origin app resources; unexpected network requests: ' + JSON.stringify(unexpected));
         }
         console.log(JSON.stringify({ locale, width, snapshotBytes, overview, arrangement, library, reset, layout, normalExport: saved.name, network: network.length }));
         win.destroy();

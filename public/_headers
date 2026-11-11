@@ -1,0 +1,4 @@
+# Keep this local-only viewer free of hosting-provider script injection.
+# Cloudflare honors no-transform when serving the application document.
+/*
+  Cache-Control: public, max-age=0, must-revalidate, no-transform
