@@ -85,7 +85,10 @@ app.whenReady().then(async () => {
         const homepage = await win.webContents.executeJavaScript('document.body.innerText');
         assert.match(homepage, /Studio One/); assert.match(homepage, /Fender Studio Pro/);
         const network = [];
-        win.webContents.session.webRequest.onBeforeRequest((details, callback) => { if (/^https?:/.test(details.url)) network.push(details.url); callback({}); });
+        win.webContents.session.webRequest.onBeforeRequest((details, callback) => {
+          if (/^https?:/.test(details.url)) network.push({ url: details.url, method: details.method, hasUpload: !!details.uploadData?.length });
+          callback({});
+        });
         await win.webContents.executeJavaScript(fixtureTools);
         await loadFixture(win);
         const info = await win.webContents.executeJavaScript("[...document.querySelectorAll('.songInfo dl>div')].map(e=>({label:e.querySelector('dt').textContent,value:e.querySelector('dd').textContent}))");
@@ -101,6 +104,7 @@ app.whenReady().then(async () => {
         await until(win, "document.querySelector('.compatibilityExport select').value==='6'&&!document.querySelector('.compatibilityDownload').disabled", 'target 6 export allowed');
         const six = await exported(win, 1, 7, 6);
         await win.webContents.executeJavaScript("document.querySelector('.compatibilityExport').scrollIntoView({block:'center'})");
+        await pause(200); // Let the compositor display the scrolled export panel before capture.
         const layout = await win.webContents.executeJavaScript('({page:document.documentElement.scrollWidth,viewport:innerWidth})');
         assert(layout.page <= layout.viewport + 1, 'version/compatibility UI does not overflow the page');
         fs.mkdirSync(path.join(root, 'logs'), { recursive: true });
@@ -134,7 +138,13 @@ app.whenReady().then(async () => {
         await until(win, "!!document.querySelector('.compatibilityBlocker')", 'unknown saved application blocker');
         assert.equal(await win.webContents.executeJavaScript("document.querySelector('.compatibilityDownload').disabled"), true);
         assert.equal(await win.webContents.executeJavaScript('window.__compatSaved.length'), 0);
-        const submitted = network.filter(url => !/\/(?:assets\/|sw\.js|manifest\.webmanifest|icon-|brand\/)/.test(url));
+        // The live service worker may pre-cache the shell after initial rendering.
+        // Only same-origin GET/HEAD requests for explicit app resources are allowed.
+        const submitted = network.filter(request => {
+          if (!process.env.WEB_URL || !['GET','HEAD'].includes(request.method) || request.hasUpload) return true;
+          const url=new URL(request.url),base=new URL(process.env.WEB_URL);
+          return url.origin!==base.origin || !/^\/(?:$|index\.html$|assets\/|sw\.js$|manifest\.webmanifest$|icon-[^/]+$|apple-touch-icon\.png$|brand\/)/.test(url.pathname);
+        });
         assert.deepEqual(submitted, [], 'project import/export makes no remote requests');
         if (!process.env.WEB_URL) assert.deepEqual(network, [], 'offline UI processing has no network requests');
         console.log(JSON.stringify({ locale, width, seven: seven.name, six: six.name, unchanged: seven.unchanged, inputStillSame: seven.inputStillSame && six.inputStillSame, sameVersionReloadBlocked: true, unknownBlocked: true, layout, network: network.length }));
