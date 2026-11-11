@@ -31,3 +31,12 @@
 .welcomeActions{display:flex;flex-direction:column;align-items:center;gap:10px;margin:28px 0 22px}.welcome .welcomeActions .primary{margin:0;padding:13px 22px;font-size:15px}.welcome .welcomeActions .primary:hover{background:#a5e4d5}.welcomeActions .demoOpen{padding:8px 18px;font-size:12px;background:transparent;color:#b3c9ca;border-color:#4c646b;border-radius:6px}
 .demoNotice{padding:9px 22px;background:#34463d;border-bottom:1px solid #597260;color:#cce0bc;font-size:12px;line-height:1.5}.homeButton{font-size:12px;white-space:nowrap}
 @media(max-width:820px){.demoNotice{padding:8px 12px;font-size:11px}.homeButton{padding:8px;font-size:10px}header{flex-wrap:wrap}.headerTitle{min-width:70px}.logoBrand{width:100px}}
+
+/* Shared bottom-dock splitter: touch drag, mouse drag and keyboard. */
+.resizablePanel{position:relative;min-height:0;max-height:none;flex-shrink:0}
+.resizablePanel .channelScroll{min-height:0}
+.resizablePanel .mixerHeading{flex-shrink:0}
+.panelResizeHandle{height:14px;flex-shrink:0;cursor:ns-resize;touch-action:none;user-select:none;display:flex;align-items:center;justify-content:center;background:#202c32;border-bottom:1px solid #40515b;outline-offset:-2px}
+.panelResizeHandle span{height:3px;width:48px;border-radius:2px;background:#8b9ea8;pointer-events:none}
+.panelResizeHandle:hover,.panelResizeHandle:focus-visible{background:#354b55;outline:2px solid #8ed6c5}
+@media(pointer:coarse){.panelResizeHandle{height:24px}}

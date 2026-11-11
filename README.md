@@ -145,7 +145,7 @@ F2 / F3 面板互斥：打开 MIDI 窗会收起插件窗，反之亦然；插件
 ## Cloudflare Pages 部署（原生 Git 集成）
 
 - 正式域名：<https://songscope.response.run>
-- Pages 项目：`songscope-web`，源仓库：`yukinsnow/SongScope`（保持私有）。
+- Pages 项目：`songscope-web`，源仓库：`yukinsnow/SongScope`（MIT 开源）。
 - 生产分支：`main`；构建命令：`npm run build`；输出：`dist/`。
 - 环境变量：`NODE_VERSION=22`、`ELECTRON_SKIP_BINARY_DOWNLOAD=1`（仅网页构建无需下载 Electron）。
 - 推送 main 后由 Cloudflare 自动拉取、构建、部署，不再手动上传 dist；API Token 不进入仓库或网页。
@@ -227,3 +227,9 @@ SONG=/path/to/example.song xvfb-run -a node_modules/.bin/electron --no-sandbox s
 SongScope source code is licensed under the [MIT License](LICENSE). Third-party dependencies retain their own licenses. Demo music and example project content are provided for in-app viewing only; the MIT license does not grant rights to redistribute that musical content.
 
 SongScope 源代码采用 MIT 许可证；第三方依赖遵循各自许可。示例音乐及示例工程内容仅供应用内查看，不属于 MIT 授权的音乐内容再分发范围。
+
+### Resizable bottom panels / 底部面板高度
+
+Drag the top divider of the MIDI or channel/plugin panel up or down. Each panel remembers its height while the app is open. Use arrow keys on the divider (Shift for larger steps), Home/End for limits, or double-click to reset. Touch dragging is supported.
+
+拖动 MIDI 窗或通道/插件区顶部的分隔条即可调整高度，两者在本次打开应用期间分别记忆。分隔条支持方向键（Shift 加大步进）、Home/End 和双击复位，也支持触屏拖动。

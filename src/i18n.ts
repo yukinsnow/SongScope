@@ -1,6 +1,8 @@
 // UI strings only: never translate project content, plugin names or media paths.
 export const language = (navigator.languages?.[0] || navigator.language || 'en').toLowerCase().startsWith('zh') ? 'zh' : 'en';
 const english: Record<string,string> = {
+ "调整底部面板高度": "Resize bottom panel",
+ "上下拖动调整高度；方向键微调，双击恢复默认": "Drag vertically to resize; arrow keys to adjust, double-click to reset",
  "示例不公开素材路径": "Media paths are not included in the example",
  "示例工程": "Example project",
  "查看示例工程": "View example project",

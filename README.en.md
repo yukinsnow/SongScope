@@ -4,7 +4,7 @@
 
 Explore Studio One / Fender Studio Pro projects, tracks, MIDI, plugins and saved instrument presets without installing those plugins. Available on Windows, macOS, Linux and browser/PWA on mobile and desktop.
 
-**Web app:** https://songscope.response.run · **Downloads:** [private Releases](../../releases) (repository access required).
+**Web app:** https://songscope.response.run · **Downloads:** [Releases](../../releases).
 
 ## Privacy & disclaimer
 
@@ -125,3 +125,9 @@ Kontakt saved-state parsing and encrypted-state labels are supported without lau
 SongScope source code is licensed under the [MIT License](LICENSE). Third-party dependencies retain their own licenses. Demo music and example project content are provided for in-app viewing only; the MIT license does not grant rights to redistribute that musical content.
 
 SongScope 源代码采用 MIT 许可证；第三方依赖遵循各自许可。示例音乐及示例工程内容仅供应用内查看，不属于 MIT 授权的音乐内容再分发范围。
+
+### Resizable bottom panels / 底部面板高度
+
+Drag the top divider of the MIDI or channel/plugin panel up or down. Each panel remembers its height while the app is open. Use arrow keys on the divider (Shift for larger steps), Home/End for limits, or double-click to reset. Touch dragging is supported.
+
+拖动 MIDI 窗或通道/插件区顶部的分隔条即可调整高度，两者在本次打开应用期间分别记忆。分隔条支持方向键（Shift 加大步进）、Home/End 和双击复位，也支持触屏拖动。
