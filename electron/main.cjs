@@ -5,7 +5,7 @@ const fs = require("fs");
 function createWindow() {
   const win = new BrowserWindow({
     title: app.getLocale().toLowerCase().startsWith("zh") ? "SongScope — Studio One / Fender Studio Pro 工程查看器" : "SongScope — Studio One / Fender Studio Pro project viewer",
-    icon: path.join(__dirname, "../dist/icon-512.png"),
+    icon: path.join(__dirname, "../dist/brand/songscope-client-icon.png"),
     width: 1280,
     height: 840,
     minWidth: 960,

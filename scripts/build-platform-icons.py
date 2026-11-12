@@ -5,7 +5,8 @@ from pathlib import Path
 from PIL import Image
 root=Path(__file__).resolve().parent.parent
 im=Image.open(root/'public/brand/songscope-icon-source.png').convert('RGBA')
-icon=im.resize((512,512),Image.Resampling.LANCZOS)
+client=Image.open(root/'public/brand/songscope-client-icon.png').convert('RGBA')
+icon=client.resize((1024,1024),Image.Resampling.LANCZOS)
 icon.save(root/'build/icon.png')
 for size in (192,512):im.resize((size,size),Image.Resampling.LANCZOS).save(root/f'public/icon-{size}.png')
 im.resize((180,180),Image.Resampling.LANCZOS).save(root/'public/apple-touch-icon.png')
