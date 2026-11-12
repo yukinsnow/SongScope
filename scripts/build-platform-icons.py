@@ -6,6 +6,7 @@ from PIL import Image
 root=Path(__file__).resolve().parent.parent
 im=Image.open(root/'public/brand/songscope-icon-source.png').convert('RGBA')
 client=Image.open(root/'public/brand/songscope-client-icon.png').convert('RGBA')
+assert client.getchannel('A').getextrema() == (255,255), 'Client icon must be fully opaque; unexpected transparent holes'
 icon=client.resize((1024,1024),Image.Resampling.LANCZOS)
 icon.save(root/'build/icon.png')
 for size in (192,512):im.resize((size,size),Image.Resampling.LANCZOS).save(root/f'public/icon-{size}.png')

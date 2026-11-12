@@ -14,6 +14,6 @@ Platform conversion: `node scripts/build-icons.cjs` (requires Python 3 + Pillow)
 
 ## Client icon update (2026-11-12)
 
-The client icon now uses the full selected handwritten SongScope wordmark, blue notes and underline, as requested. Source: `public/brand/songscope-client-icon.png`; the concept number 01 is removed, with transparent rounded corners. Converted to `build/icon.png`, `.ico`, `.icns`. Web/PWA note-only icons remain unchanged.
+The client icon now uses the full selected handwritten SongScope wordmark, blue notes and underline, as requested. Source: `public/brand/songscope-client-icon.png`; the concept number 01 is removed, with a fully opaque dark square background (transparent-background artifacts were corrected). Converted to `build/icon.png`, `.ico`, `.icns`. Web/PWA note-only icons remain unchanged.
 
-Built-in imagegen edit prompt: preserve the existing central artwork exactly, remove only the lower-left concept number 01, keep the near-black square with gently rounded transparent corners; no redesign, added text, glow or borders.
+Built-in imagegen edit prompt: preserve the existing central artwork exactly, remove only the lower-left concept number 01, keep a fully opaque near-black square without any transparent pixels; no redesign, added text, glow or borders.
