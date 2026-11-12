@@ -82,7 +82,7 @@ npm run dist:mac
 npm run dist:linux
 ```
 
-Packages are written to `release/`: Windows x64 ZIP, Linux x64/ARM64 AppImage and macOS Intel/Apple Silicon DMG (five desktop files). The `dist:*` scripts use these same targets. macOS builds require macOS. [GitHub Actions](.github/workflows/build.yml) builds Windows x64, Linux x64/ARM64 and macOS Intel/Apple Silicon; tagged builds attach artifacts to private Releases.
+Packages are written to `release/`: Windows x64 ZIP, Linux x64/ARM64 AppImage and macOS Intel/Apple Silicon DMG (five desktop files). The `dist:*` scripts use these same targets. macOS builds require macOS. [GitHub Actions](.github/workflows/build.yml) builds Windows x64, Linux x64/ARM64 and macOS Intel/Apple Silicon; tagged builds attach artifacts to public Releases.
 
 ```bash
 xvfb-run -a npx electron --no-sandbox scripts/test-demo.cjs
@@ -103,7 +103,7 @@ npm run build
 
 ## Deployment & source layout
 
-Cloudflare Pages project `songscope-web` is connected directly to private repository `yukinsnow/SongScope`. Pushing `main` triggers `npm run build`, output `dist/`, using Node 22 and `ELECTRON_SKIP_BINARY_DOWNLOAD=1`. No manual dist uploads. The historical `songscope.pages.dev` direct-upload project is no longer updated.
+Cloudflare Pages project `songscope-web` is connected directly to public repository `yukinsnow/SongScope`. Pushing `main` triggers `npm run build`, output `dist/`, using Node 22 and `ELECTRON_SKIP_BINARY_DOWNLOAD=1`. No manual dist uploads. The historical `songscope.pages.dev` direct-upload project is no longer updated.
 
 - `src/App.tsx`: viewer and MIDI export UI; `src/i18n.ts`: UI translations and locale detection.
 - `src/lib/song.ts`: ZIP/XML, media references and plugin routing.

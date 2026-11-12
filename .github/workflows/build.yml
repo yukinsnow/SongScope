@@ -41,6 +41,8 @@ jobs:
           xvfb-run -a npx electron --no-sandbox scripts/test-i18n-audio.cjs
           xvfb-run -a npx electron --no-sandbox scripts/test-timing-shortcuts.cjs
           xvfb-run -a npx electron --no-sandbox scripts/test-presets.cjs
+          xvfb-run -a npx electron --no-sandbox scripts/test-panel-resize.cjs
+          xvfb-run -a npx electron --no-sandbox scripts/test-track-height.cjs
           node scripts/test-kontakt.cjs
           node scripts/test-note-window.cjs
           node scripts/test-vital-preset.cjs
@@ -60,7 +62,7 @@ jobs:
             release/*.zip
             release/*.dmg
           if-no-files-found: error
-      - name: Attach to private Release
+      - name: Attach to Release
         if: startsWith(github.ref, 'refs/tags/')
         shell: bash
         env:

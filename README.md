@@ -6,7 +6,7 @@
 
 SongScope 是一个只读歌曲浏览器：不需要安装工程里的 VST 插件，也能查看工程结构、音符片段和插件名称。支持 Windows / macOS / Linux 桌面构建，以及手机与平板上的浏览器 / PWA。
 
-> 当前为私有预览项目。GitHub 仓库与 Release 保持私有。网页版可通过链接访问，使用者打开的工程文件仅在本地解析，不会上传到服务器。
+> 项目采用 MIT 许可证开源，GitHub 仓库与 Release 已公开。网页版可通过链接访问，使用者打开的工程文件仅在本地解析，不会上传到服务器。
 
 ## 语言、隐私与免责
 
@@ -117,7 +117,7 @@ npm run dist:mac    # macOS Intel / Apple Silicon DMG；必须在 macOS 构建
 npm run dist:linux  # Linux x64 / ARM64 AppImage
 ```
 
-产物在 `release/`，共 5 份桌面文件：Windows x64 ZIP、Linux x64 / ARM64 AppImage、macOS x64 / ARM64 DMG。跨平台 CI 见 [build.yml](.github/workflows/build.yml)。发布标签后，工作流会把各平台产物附加到私有 Release；不会把仓库改为公开。
+产物在 `release/`，共 5 份桌面文件：Windows x64 ZIP、Linux x64 / ARM64 AppImage、macOS x64 / ARM64 DMG。跨平台 CI 见 [build.yml](.github/workflows/build.yml)。发布标签后，工作流会把各平台产物附加到公开 Release。
 
 ## 快捷键
 

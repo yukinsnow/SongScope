@@ -20,7 +20,10 @@ function createWindow() {
   });
 
   win.webContents.setWindowOpenHandler(({url})=>{
-    if(url.startsWith('https://github.com/'))shell.openExternal(url);
+    try {
+      const target=new URL(url);
+      if(target.protocol==='https:'&&['github.com','space.bilibili.com'].includes(target.hostname))shell.openExternal(url);
+    } catch { /* Deny malformed external URLs. */ }
     return {action:'deny'};
   });
 

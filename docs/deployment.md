@@ -4,7 +4,7 @@
 
 - URL: https://songscope.response.run
 - Cloudflare Pages project: `songscope-web`
-- Source provider: native GitHub integration, `yukinsnow/SongScope` (private), production branch `main`
+- Source provider: native GitHub integration, `yukinsnow/SongScope` (public, MIT), production branch `main`
 - Build command: `npm run build`; output directory: `dist`; repository root
 - Build environment: `NODE_VERSION=22`, `ELECTRON_SKIP_BINARY_DOWNLOAD=1`
 - DNS: proxied `songscope.response.run` CNAME to `songscope-web.pages.dev`
@@ -23,6 +23,6 @@ These checks load the live app in a clean session, use synthetic timing/preset c
 
 ## Desktop release
 
-Tag-triggered `.github/workflows/build.yml` builds Windows x64 ZIP, Linux x64/ARM64 AppImage, and macOS Intel/Apple Silicon DMG. Linux runs timing/shortcut/preset regression checks before packaging. Assets are attached to a private Release; preserve repository privacy. Source-only pushes update Pages without creating a desktop release.
+Tag-triggered `.github/workflows/build.yml` builds Windows x64 ZIP, Linux x64/ARM64 AppImage, and macOS Intel/Apple Silicon DMG. Linux runs timing/shortcut/preset regression checks before packaging. Assets are attached to a public Release. Source-only pushes update Pages without creating a desktop release.
 
 Do not store credentials in this file, the repository, or public assets. The Cloudflare Git integration holds its own GitHub authorization; desktop CI uses the built-in repository token.

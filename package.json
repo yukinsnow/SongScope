@@ -1,7 +1,7 @@
 {
   "name": "songscope",
   "productName": "SongScope",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "SongScope — Studio One / Fender Studio Pro project viewer and compatibility exporter",
   "main": "electron/main.cjs",
   "private": true,
@@ -36,7 +36,8 @@
     "files": [
       "dist/**/*",
       "electron/**/*",
-      "package.json"
+      "package.json",
+      "LICENSE"
     ],
     "directories": {
       "output": "release"
