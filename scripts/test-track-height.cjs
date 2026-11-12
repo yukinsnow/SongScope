@@ -1,0 +1,21 @@
+const {app,BrowserWindow}=require('electron');const assert=require('node:assert/strict');const path=require('node:path');
+app.disableHardwareAcceleration();const pause=ms=>new Promise(r=>setTimeout(r,ms));
+app.whenReady().then(async()=>{try{
+ const w=new BrowserWindow({width:1280,height:900,useContentSize:true,show:true});
+ if(process.env.TEST_URL)await w.loadURL(process.env.TEST_URL);else await w.loadFile(path.resolve(__dirname,'../dist/index.html'));
+ const run=s=>w.webContents.executeJavaScript(s);
+ await run("document.querySelector('.demoOpen').click()");for(let i=0;i<150&&!(await run("!!document.querySelector('.toolbar')"));i++)await pause(100);
+ await run("document.querySelectorAll('.switch button')[1].click()");await pause(100);
+ const sizes=()=>run(`(()=>{const lane=document.querySelector('.lane'),clip=document.querySelector('.clip:not(.audioClip)'),audio=document.querySelector('.audioClip');return {lane:lane.getBoundingClientRect().height,midi:clip.getBoundingClientRect().height,width:clip.getBoundingClientRect().width,left:clip.style.left,audio:audio.getBoundingClientRect().height,page:document.documentElement.scrollWidth,view:innerWidth,selected:document.querySelectorAll('.clip[aria-pressed=true]').length,overflow:[...document.querySelectorAll('.lane')].some(l=>[...l.querySelectorAll('.clip')].some(c=>parseFloat(c.style.top||'6')+c.getBoundingClientRect().height>l.getBoundingClientRect().height))}})()`);
+ const initial=await sizes();assert.equal(initial.lane,72);
+ await run("document.querySelector('.clip:not(.audioClip)').click()");
+ const slider=()=>run("[...document.querySelectorAll('.arrangeZoom input')][1].getBoundingClientRect().toJSON()");
+ w.webContents.debugger.attach('1.3');
+ const set=async right=>{const r=await slider();const x=right?r.right-3:r.x+3,y=r.y+r.height/2;for(const type of ['mousePressed','mouseReleased'])await w.webContents.debugger.sendCommand('Input.dispatchMouseEvent',{type,x,y,button:'left',buttons:type==='mousePressed'?1:0,clickCount:1});await pause(100)};
+ await set(true);const large=await sizes();assert.equal(large.lane,180);assert.equal(large.midi,168);assert.equal(large.audio,168);assert.equal(large.width,initial.width);assert.equal(large.left,initial.left);assert.equal(large.selected,1);assert(!large.overflow,'stacked audio remains inside lanes');
+ await set(false);const small=await sizes();assert.equal(small.lane,36);assert.equal(small.midi,24);assert(!small.overflow);
+ await run("document.querySelector('.resetTrackHeight').click()");assert.equal((await sizes()).lane,72);
+ await run("document.querySelector('.utilityButtons button:last-child').click()");await pause(100);assert.equal((await sizes()).lane,72,'MIDI dock independent');
+ w.setContentSize(390,760);await pause(120);const mobile=await sizes();assert(mobile.page<=mobile.view,'mobile has no page overflow');
+ console.log('PASS: 36–180px track height, MIDI/audio sizing, stacked audio bounds, unchanged MIDI timing/selection, reset, dock and mobile layout');app.quit();
+}catch(e){console.error(e);app.exit(1)}});

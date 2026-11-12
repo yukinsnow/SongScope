@@ -131,3 +131,9 @@ SongScope 源代码采用 MIT 许可证；第三方依赖遵循各自许可。�
 Drag the top divider of the MIDI or channel/plugin panel up or down. Each panel remembers its height while the app is open. Use arrow keys on the divider (Shift for larger steps), Home/End for limits, or double-click to reset. Touch dragging is supported.
 
 拖动 MIDI 窗或通道/插件区顶部的分隔条即可调整高度，两者在本次打开应用期间分别记忆。分隔条支持方向键（Shift 加大步进）、Home/End 和双击复位，也支持触屏拖动。
+
+### Vertical track zoom / 走带纵向缩放
+
+The arrangement toolbar provides independent horizontal zoom and track height (36–180 px). MIDI and stacked audio lanes scale together. Reset height restores 72 px without changing MIDI timing or selection.
+
+走带工具栏支持独立的横向缩放和轨道高度（36–180 像素）。MIDI 与分层音频同步调整显示高度；“重置高度”恢复为 72 像素，不改变 MIDI 时间或选择。

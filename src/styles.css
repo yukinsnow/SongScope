@@ -40,3 +40,14 @@
 .panelResizeHandle span{height:3px;width:48px;border-radius:2px;background:#8b9ea8;pointer-events:none}
 .panelResizeHandle:hover,.panelResizeHandle:focus-visible{background:#354b55;outline:2px solid #8ed6c5}
 @media(pointer:coarse){.panelResizeHandle{height:24px}}
+
+/* Horizontal time zoom and vertical track zoom are independent. */
+.arrangeTools{gap:10px;flex-wrap:wrap;flex-shrink:0}
+.arrangeZoom{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.arrangeZoom output{min-width:24px;color:#aebfc7;font-variant-numeric:tabular-nums}
+.resetTrackHeight{font-size:11px;padding:5px 8px}
+.lane .clip svg{height:calc(100% - 22px);min-height:0}
+.compactTracks .lane .trackHeader{padding:3px 8px;gap:6px}
+.compactTracks .lane .trackHeader div>small{display:none}
+.compactTracks .lane .audioClip small{display:none}
+@media(max-width:820px){.arrangeZoom{gap:8px}.arrangeZoom input{width:72px}}
